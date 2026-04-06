@@ -4,7 +4,7 @@
             @click="open = !open"
             class="flex items-center gap-2 text-base text-gray-600 hover:text-black transition-colors"
         >
-            <slot />
+            <slot :open="open" />
             <Icon
                 v-if="arrow"
                 :name="open ? 'lucide:chevron-up' : 'lucide:chevron-down'"
