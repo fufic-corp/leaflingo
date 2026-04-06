@@ -4,7 +4,7 @@
 
         <template v-if="profileStore.pending">
             <div class="flex items-center gap-6">
-                <div class="w-24 h-24 rounded-full bg-gray-200 animate-pulse" />
+                <div class="w-24 h-24 rounded-4xl bg-gray-200 animate-pulse" />
                 <div class="flex flex-col gap-2">
                     <div
                         class="h-4 w-32 bg-gray-200 rounded-full animate-pulse"
@@ -31,11 +31,11 @@
                     <img
                         v-if="profileStore.profile?.avatar_url"
                         :src="profileStore.profile.avatar_url"
-                        class="w-24 h-24 rounded-full object-cover"
+                        class="w-24 h-24 rounded-4xl object-cover"
                     />
-                    <div v-else class="w-24 h-24 rounded-full bg-gray-200" />
+                    <div v-else class="w-24 h-24 rounded-4xl bg-gray-200" />
                     <div
-                        class="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                        class="absolute inset-0 rounded-4xl bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
                     >
                         <Icon
                             name="lucide:camera"
@@ -75,20 +75,14 @@
                     />
                     <button
                         @click="saveUsername"
-                        :disabled="saving"
+                        :disabled="
+                            saving ||
+                            newUsername === profileStore.profile?.username
+                        "
                         class="btn"
                     >
                         Save
                     </button>
-                </div>
-                <label class="text-sm font-medium text-gray-700">Email</label>
-                <div class="flex gap-2">
-                    <input
-                        v-model="newEmail"
-                        type="text"
-                        class="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-gray-400 w-64"
-                    />
-                    <button disabled class="btn">Save</button>
                 </div>
             </div>
         </template>
@@ -101,18 +95,10 @@ const profileStore = useProfileStore();
 const fileInput = ref<HTMLInputElement | null>(null);
 const user = useSupabaseUser();
 const newUsername = ref('');
-const newEmail = ref('');
 watch(
     () => profileStore.profile?.username,
     val => {
         if (val) newUsername.value = val;
-    },
-    { immediate: true },
-);
-watch(
-    () => profileStore.profile?.email,
-    val => {
-        if (val) newEmail.value = val;
     },
     { immediate: true },
 );

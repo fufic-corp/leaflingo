@@ -1,5 +1,5 @@
 <template>
-    <div class="flex min-h-screen">
+    <div class="flex min-h-screen bg-slate-50">
         <Sidebar />
         <div class="flex-1 flex flex-col">
             <Header />
