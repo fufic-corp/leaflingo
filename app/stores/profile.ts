@@ -17,5 +17,7 @@ export const useProfileStore = defineStore('profile', () => {
         pending.value = false;
     }
 
-    return { profile, pending, fetchProfile };
+    const isAdmin = computed(() => profile.value?.role === 'admin');
+
+    return { profile, pending, fetchProfile, isAdmin };
 });

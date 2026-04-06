@@ -10,10 +10,16 @@
                 :src="profileStore.profile.avatar_url"
                 class="w-8 h-8 rounded-full object-cover"
             />
-            <Dropdown
-                :label="profileStore.profile?.username ?? ''"
-:items="dropdownItems"
-            />
+            <Dropdown arrow :items="dropdownItems">
+                <span class="flex flex-col items-start">
+                    <span>{{ profileStore.profile?.username }}</span>
+                    <span
+                        v-if="profileStore.isAdmin"
+                        class="text-[10px] font-medium px-1.5 py-0.5 bg-slate-800 text-white rounded-md leading-4"
+                        >Admin</span
+                    >
+                </span>
+            </Dropdown>
         </div>
     </header>
 </template>
@@ -28,7 +34,12 @@ async function logout() {
 }
 
 const dropdownItems = computed(() => [
-    { label: 'My Account', icon: 'lucide:user', subtitle: profileStore.profile?.email ?? '', action: () => navigateTo('/profile') },
+    {
+        label: 'My Account',
+        icon: 'lucide:user',
+        subtitle: profileStore.profile?.email ?? '',
+        action: () => navigateTo('/profile'),
+    },
     { label: 'Выйти', icon: 'lucide:log-out', action: logout },
 ]);
 </script>
