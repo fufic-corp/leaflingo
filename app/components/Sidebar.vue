@@ -22,6 +22,7 @@
 
         <nav class="flex flex-col gap-1 p-3">
             <template v-for="item in navItems" :key="item.href">
+                <!-- <div v-if=""></div> -->
                 <SidebarNavItem
                     :href="item.href"
                     :label="item.label"
@@ -36,11 +37,18 @@
 
 <script setup lang="ts">
 const isOpen = ref(true);
+const profileStore = useProfileStore();
 
-const navItems = [
-    { href: '/', label: 'Home', icon: 'lucide:house', divider: true },
-    { href: '/calendar', label: 'Calendar', icon: 'lucide:calendar' },
-    { href: '/learn', label: 'Learn', icon: 'lucide:book-open' },
-    { href: '/analytics', label: 'Analytics', icon: 'lucide:chart-bar' },
+const navItemsUser:any = [
+    { href: '/', label: 'Home', icon: 'lucide:house', divider: true, role:"user" },
+    { href: '/calendar', label: 'Calendar', icon: 'lucide:calendar', role:"user" },
+    { href: '/learn', label: 'Learn', icon: 'lucide:book-open', role:"user" },
+    { href: '/analytics', label: 'Analytics', icon: 'lucide:chart-bar', role:"user" },
 ];
+
+const navItemsAdmin = [...navItemsUser,
+    { href: '/admin_pages/addTasks', label: 'Admin', icon: 'lucide:folder-dot'},
+];
+
+const navItems = computed(() => profileStore.isAdmin?navItemsAdmin:navItemsUser)
 </script>
