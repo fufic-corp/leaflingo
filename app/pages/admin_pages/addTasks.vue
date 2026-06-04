@@ -4,6 +4,7 @@
             tasks in db: <b>{{ task_num }}</b>
         </section>
     </div>
+    <PopUpFileInput v-if="isOpened" @close="close_pop_up" @import=""/>
     <div class="super_wrapper">
         <div class="task_wrapper">
             <input class="task" type="text" v-model="task_text" placeholder="type task here">
@@ -17,15 +18,23 @@
                 <section class="answ_buttons">
                     <button class="add_answer" @click="add_answer">+</button>
                     <button class="delete_answer" @click="delete_answer">-</button>
+                    <div class="pop_up_opener" @click="open_pop_up">
+                        <Icon :name="icon_name" />
+                    </div>  
                 </section>
             </div>
             <button class="submit" @click="submit">Add</button>
         </div>
+        
     </div>
 </template>
 
 <script setup lang="ts">
-import chalk from 'chalk'
+import PopUpFileInput from '~/components/PopUpFileInput.vue'
+
+const icon_name:string = "lucide:file-text"
+
+const isOpened = ref<boolean>(false)
 
 type Answer = {
     text:String,
@@ -120,6 +129,15 @@ async function submit(){
     clear_form()
     task_num_display()
 }
+
+function open_pop_up () {
+    isOpened.value = true
+}
+
+function close_pop_up () {
+    isOpened.value = false
+}
+
 </script>
 
 
@@ -300,5 +318,23 @@ async function submit(){
 .task_num b {
     color: #1e293b;
     font-size: 17px;
+}
+
+.pop_up_opener {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    color: #64748b;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.pop_up_opener:hover {
+    background: #f8fafc;
+    color: #1e293b;
 }
 </style>
