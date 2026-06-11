@@ -2,7 +2,7 @@
     <div class="relative" ref="container">
         <button
             @click="open = !open"
-            class="flex items-center gap-2 text-base text-gray-600 hover:text-black transition-colors"
+            :class="['flex items-center gap-2 text-base text-gray-600 hover:text-black transition-colors', fullWidth ? 'w-full' : '']"
         >
             <slot :open="open" />
             <Icon
@@ -13,7 +13,7 @@
         </button>
         <div
             v-if="open"
-            class="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-1"
+            class="absolute left-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-1"
         >
             <div v-if="badge" class="px-4 py-2 border-b border-gray-100 mb-1">
                 <span class="text-xs font-medium px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full">{{ badge }}</span>
@@ -38,6 +38,7 @@
 defineProps<{
     arrow?: boolean;
     badge?: string;
+    fullWidth?: boolean;
     items: { label: string; icon: string; subtitle?: string; action: () => void }[];
 }>();
 

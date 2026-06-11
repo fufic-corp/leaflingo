@@ -18,7 +18,7 @@ export default defineNuxtConfig({
 
     icon: {
         serverBundle: {
-            collections: ['lucide', 'circle-flags'],
+            collections: ['lucide', 'circle-flags', 'flag', 'ph', 'solar', 'tabler'],
         },
         clientBundle: {
             scan: true,
