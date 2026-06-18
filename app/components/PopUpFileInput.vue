@@ -1,152 +1,115 @@
 <template>
-    <div class="pop_up_overlay">
-        <div class="pop_up_wrapper">
-            <h2 class="pop_up_title">Import Tasks</h2>
-            <p class="pop_up_desc">File should contain tasks with answers. At least one answer in task must be correct.</p>
-            <label class="file_label">
-                <input class="file_input" type="file" accept=".json,.txt">
-                <span class="file_btn">Choose file</span>
-                <span class="file_name">No file chosen</span>
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40">
+        <div class="flex w-105 flex-col gap-4 rounded-xl border border-slate-200 bg-white p-7">
+            <h2 class="m-0 text-lg font-semibold text-slate-800">Import Tasks</h2>
+            <p class="m-0 text-sm text-slate-500">File should contain tasks with answers. At least one answer in task must be correct.</p>
+            <label class="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5">
+                <input @change="name_display" class="file_input hidden" type="file" accept=".json,.txt,.docx">
+                <span class="whitespace-nowrap rounded-md bg-[#6db98a] px-3.5 py-1.5 text-[13px] text-white">Choose file</span>
+                <span class="overflow-hidden text-ellipsis whitespace-nowrap text-[13px] text-slate-400">{{file_name}}</span>
             </label>
-            <section class="pop_up_buttons">
-                <button class="pop_up_cancel" @click="emit('close')">Cancel</button>
-                <button class="pop_up_submit" @click="parseFile">Import</button>
+            <section class="flex justify-end gap-2.5">
+                <button class="cursor-pointer rounded-lg border border-slate-200 bg-transparent px-5 py-2 text-sm text-slate-500 transition-colors hover:bg-slate-50" @click="emit('close')">Cancel</button>
+                <button class="cursor-pointer rounded-lg border-none bg-[#5d98b6] px-5 py-2 text-sm text-white transition-colors hover:bg-[#368bb7]" @click="sumbit">Import</button>
             </section>
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
-import chalk from 'chalk'
+import mammoth from 'mammoth'
+// structure
+// [
+//   {
+//     "task": "Where is elephant live?",
+//     "answers": [
+//       { "text": "Africa", "isCorrect": true },
+//       { "text": "Europe", "isCorrect": false },
+//       { "text": "Asia", "isCorrect": true }
+//     ],
+//     "type": "test"
+//   }
+// ]
 
-    const emit = defineEmits<{
-        close: []
-        import: []
-    }>()
+const emit = defineEmits<{
+    close: []
+    import: [tasks: ParsedTask[]]
+}>()
 
-    onMounted(() => {
+const file_name = ref<string>("No file chosen")
 
-    })
+type Answer = { text: string; isCorrect: boolean }
+type ParsedTask = { task: string; answers: Answer[]; type: string }
 
-    async function parseFile() {
-        const file = document.querySelector<HTMLInputElement>(".file_input")
-        const reader = new FileReader()
-        const selected_file:File | undefined = file?.files?.[0]
-        if(!selected_file) return
-        
-        reader.readAsText(selected_file)
+function name_display() {
+    const file = document.querySelector<HTMLInputElement>(".file_input")
+    const selected_file = file?.files?.[0]
+    if (!selected_file) return
+    file_name.value = selected_file.name
+}
 
-        reader.onload = () => {
-            const res = reader.result
-            if(typeof res === "string") {
-                console.log(chalk.red(res))
-            }
+function parseText(text: string): ParsedTask[] {
+    const tasks: ParsedTask[] = []
+    let current: ParsedTask | null = null
+
+    for (const raw of text.split(/\r?\n/)) {
+        const line = raw.trim()
+        if (!line) continue
+
+        const match = line.match(/^(.*?)\s*\(([01])\)$/)
+        if (match) {
+            const [, answerText, flag] = match
+            if (!current || answerText === undefined || flag === undefined) continue
+            current.answers.push({ text: answerText.trim(), isCorrect: flag === '1' })
+        } else {
+            if (current) tasks.push(current)
+            current = { task: line, answers: [], type: 'test' }
         }
+    }
+    if (current) tasks.push(current)
 
+    return tasks
+}
+
+async function parseFile():Promise<ParsedTask[] | undefined> {
+    const input = document.querySelector<HTMLInputElement>(".file_input")
+    const file = input?.files?.[0]
+    if (!file) return
+
+    const ext = file.name.split('.').pop()?.toLowerCase()
+    let tasks: ParsedTask[]
+
+    try {
+        if (ext === 'docx') {
+            const buffer = await file.arrayBuffer()
+            const { value } = await mammoth.extractRawText({ arrayBuffer: buffer })
+            tasks = parseText(value)
+        } else if (ext === 'json') {
+            tasks = JSON.parse(await file.text())
+        } else if (ext === 'txt') {
+            tasks = parseText(await file.text())
+        } else {
+            alert("Unsupported file type")
+            return
+        }
+    } catch (err) {
+        console.error(err)
+        alert("Failed to parse file")
+        return
     }
 
+    console.log("tasks from parseFile:", tasks)
+    return tasks
+}
+
+async function sumbit() {
+    const tasks = await parseFile()
+    if (!tasks || tasks.length === 0) {
+        alert("No tasks parsed")
+        return
+    }
+    emit('import', tasks)
+    emit('close')
+}
+
 </script>
-
-<style scoped>
-.pop_up_overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(15, 23, 42, 0.4);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 50;
-}
-
-.pop_up_wrapper {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 28px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    width: 420px;
-}
-
-.pop_up_title {
-    font-size: 18px;
-    font-weight: 600;
-    color: #1e293b;
-    margin: 0;
-}
-
-.pop_up_desc {
-    font-size: 14px;
-    color: #64748b;
-    margin: 0;
-}
-
-.file_label {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 14px;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    background: #f8fafc;
-    cursor: pointer;
-}
-
-.file_input {
-    display: none;
-}
-
-.file_btn {
-    padding: 6px 14px;
-    background: #6db98a;
-    color: white;
-    border-radius: 6px;
-    font-size: 13px;
-    white-space: nowrap;
-}
-
-.file_name {
-    font-size: 13px;
-    color: #94a3b8;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.pop_up_buttons {
-    display: flex;
-    gap: 10px;
-    justify-content: flex-end;
-}
-
-.pop_up_cancel {
-    padding: 8px 20px;
-    background: transparent;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    font-size: 14px;
-    color: #64748b;
-    cursor: pointer;
-    transition: background 0.15s;
-}
-
-.pop_up_cancel:hover {
-    background: #f8fafc;
-}
-
-.pop_up_submit {
-    padding: 8px 20px;
-    background: #5d98b6;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 14px;
-    cursor: pointer;
-    transition: background 0.15s;
-}
-
-.pop_up_submit:hover {
-    background: #368bb7;
-}
-</style>
