@@ -38,7 +38,7 @@
                 class="flex items-center h-8 px-3 gap-2 text-neutral-400 hover:text-red-400 transition-colors text-xs font-semibold w-full cursor-pointer"
             >
                 <Icon name="lucide:log-out" :size="14" class="shrink-0" />
-                Sign out
+                <span v-if="isOpen" class="whitespace-nowrap">Sign out</span>
             </button>
         </div>
     </aside>
@@ -48,14 +48,23 @@
 const supabase = useSupabaseClient();
 const profileStore = useProfileStore();
 
-const navItemsUser = [
+const isOpen = ref(true);
+
+interface NavItem {
+    href: string;
+    label: string;
+    icon: string;
+    divider?: boolean;
+}
+
+const navItemsUser: NavItem[] = [
     { href: '/', label: 'Dashboard', icon: 'tabler:layout-dashboard' },
     { href: '/practice', label: 'Practice', icon: 'tabler:barbell' },
     { href: '/exams', label: 'Exams', icon: 'tabler:book' },
     { href: '/analytics', label: 'Analytics', icon: 'tabler:chart-bar' },
 ];
 
-const navItemsAdmin = [...navItemsUser,
+const navItemsAdmin: NavItem[] = [...navItemsUser,
     { href: '/admin_pages/addTasks', label: 'Admin', icon: 'tabler:shield' },
 ];
 

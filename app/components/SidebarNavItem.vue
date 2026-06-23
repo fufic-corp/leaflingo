@@ -18,16 +18,20 @@
         </div>
         <div v-else-if="!icon" class="w-6.5 h-6.5 bg-emerald-100 shrink-0" />
         <Icon v-else :name="icon" :size="26" class="shrink-0" />
-        <span class="text-lg">{{ label }}</span>
+        <span v-if="showLabel" class="text-lg whitespace-nowrap">{{ label }}</span>
     </NuxtLink>
 </template>
 
 <script setup lang="ts">
-defineProps<{
-    href: string;
-    label: string;
-    icon?: string;
-    image?: string;
-    badge?: boolean;
-}>();
+withDefaults(
+    defineProps<{
+        href: string;
+        label: string;
+        icon?: string;
+        image?: string;
+        badge?: boolean;
+        showLabel?: boolean;
+    }>(),
+    { showLabel: true },
+);
 </script>
