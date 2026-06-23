@@ -31,16 +31,38 @@
                 <div v-if="item.divider" class="my-1.5 border-t-2 border-slate-100" />
             </template>
         </nav>
+
+        <div class="p-3">
+            <button
+                @click="logout"
+                class="flex items-center h-8 px-3 gap-2 text-neutral-400 hover:text-red-400 transition-colors text-xs font-semibold w-full cursor-pointer"
+            >
+                <Icon name="lucide:log-out" :size="14" class="shrink-0" />
+                Sign out
+            </button>
+        </div>
     </aside>
 </template>
 
 <script setup lang="ts">
-const isOpen = ref(true);
+const supabase = useSupabaseClient();
+const profileStore = useProfileStore();
 
-const navItems = [
-    { href: '/', label: 'Home', icon: 'lucide:house', divider: true },
-    { href: '/calendar', label: 'Calendar', icon: 'lucide:calendar' },
-    { href: '/learn', label: 'Learn', icon: 'lucide:book-open' },
-    { href: '/analytics', label: 'Analytics', icon: 'lucide:chart-bar' },
+const navItemsUser = [
+    { href: '/', label: 'Dashboard', icon: 'tabler:layout-dashboard' },
+    { href: '/practice', label: 'Practice', icon: 'tabler:barbell' },
+    { href: '/exams', label: 'Exams', icon: 'tabler:book' },
+    { href: '/analytics', label: 'Analytics', icon: 'tabler:chart-bar' },
 ];
+
+const navItemsAdmin = [...navItemsUser,
+    { href: '/admin_pages/addTasks', label: 'Admin', icon: 'tabler:shield' },
+];
+
+const navItems = computed(() => (profileStore.isAdmin ? navItemsAdmin : navItemsUser));
+
+async function logout() {
+    await supabase.auth.signOut();
+    navigateTo('/login');
+}
 </script>
