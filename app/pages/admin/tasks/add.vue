@@ -7,11 +7,28 @@
         <!-- Material (по желанию) -->
         <fieldset class="flex flex-col gap-3 rounded-xl border border-slate-200 p-4">
             <label class="flex items-center gap-2">
-                <input type="checkbox" v-model="attachMaterial" />
-                Attach questions to a material
+                Material:
+                <select v-model="materialMode">
+                    <option value="none">None (standalone questions)</option>
+                    <option value="new">New material</option>
+                    <option value="existing">Existing material</option>
+                </select>
             </label>
 
-            <template v-if="attachMaterial">
+            <!-- выбор существующего -->
+            <select
+                v-if="materialMode === 'existing'"
+                v-model="selectedMaterialId"
+                class="input"
+            >
+                <option :value="null" disabled>Select a material…</option>
+                <option v-for="m in existingMaterials" :key="m.id" :value="m.id">
+                    {{ m.title }} ({{ m.kind }})
+                </option>
+            </select>
+
+            <!-- создание нового -->
+            <template v-if="materialMode === 'new'">
                 <label class="flex items-center gap-2">
                     Kind:
                     <select v-model="material.kind">
@@ -111,7 +128,11 @@ function emptyTask(): TaskForm {
     };
 }
 
-const attachMaterial = ref(false);
+const materialMode = ref<'none' | 'new' | 'existing'>('none');
+const existingMaterials = ref<{ id: number; title: string; kind: string }[]>(
+    [],
+);
+const selectedMaterialId = ref<number | null>(null);
 const material = ref({
     kind: 'text' as 'text' | 'audio',
     title: '',
@@ -124,13 +145,24 @@ const saving = ref(false);
 const message = ref('');
 const task_num = ref(0);
 
-onMounted(task_num_display);
+onMounted(() => {
+    task_num_display();
+    loadMaterials();
+});
 
 async function task_num_display() {
     const { count } = await supabase
         .from('tasks')
         .select('*', { count: 'exact', head: true });
     task_num.value = count ?? 0;
+}
+
+async function loadMaterials() {
+    const { data } = await supabase
+        .from('materials')
+        .select('id, title, kind')
+        .order('id', { ascending: false });
+    existingMaterials.value = data ?? [];
 }
 
 function onFile(e: Event) {
@@ -154,9 +186,13 @@ async function save() {
     saving.value = true;
     message.value = '';
     try {
-        // 1. Материал — только если включена галочка
+        // 1. Материал: none / existing / new
         let materialId: number | null = null;
-        if (attachMaterial.value) {
+        if (materialMode.value === 'existing') {
+            if (selectedMaterialId.value == null)
+                throw new Error('Select a material');
+            materialId = selectedMaterialId.value;
+        } else if (materialMode.value === 'new') {
             if (!material.value.title.trim())
                 throw new Error('Material title is required');
 
@@ -218,10 +254,12 @@ async function save() {
         }
 
         message.value = 'Saved!';
-        attachMaterial.value = false;
+        materialMode.value = 'none';
+        selectedMaterialId.value = null;
         material.value = { kind: 'text', title: '', body: '', file: null };
         tasks.value = [emptyTask()];
         task_num_display();
+        loadMaterials();
     } catch (err: unknown) {
         console.error(err);
         message.value =
