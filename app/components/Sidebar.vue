@@ -59,7 +59,7 @@ const navItemsUser = [
 
 const navItemsAdmin = [
     ...navItemsUser,
-    { href: '/admin_pages/addTasks', label: 'Admin', icon: 'tabler:shield' },
+    { href: '/admin/tasks/add', label: 'Admin', icon: 'tabler:shield' },
 ];
 
 const navItems = computed(() =>
