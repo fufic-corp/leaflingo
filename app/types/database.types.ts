@@ -38,6 +38,33 @@ export type Database = {
         }
         Relationships: []
       }
+      materials: {
+        Row: {
+          body: string | null
+          created_at: string
+          file_url: string | null
+          id: number
+          kind: string
+          title: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          file_url?: string | null
+          id?: number
+          kind: string
+          title: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          file_url?: string | null
+          id?: number
+          kind?: string
+          title?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -69,22 +96,33 @@ export type Database = {
         Row: {
           created_at: string
           id: number
+          material_id: number | null
           task_text: string | null
-          task_type: string | null
+          type: string
         }
         Insert: {
           created_at?: string
           id?: number
+          material_id?: number | null
           task_text?: string | null
-          task_type?: string | null
+          type?: string
         }
         Update: {
           created_at?: string
           id?: number
+          material_id?: number | null
           task_text?: string | null
-          task_type?: string | null
+          type?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tasks_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "materials"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

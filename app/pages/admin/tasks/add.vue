@@ -1,205 +1,233 @@
 <template>
-    <div class="flex items-center gap-3 py-3 px-6 mb-4 bg-white border border-slate-200 rounded-xl w-fit mr-auto">
-        <section class="text-[15px] text-slate-500">
-            tasks in db: <b class="text-slate-800 text-[17px]">{{ task_num }}</b>
-        </section>
-    </div>
-    <PopUpFileInput v-if="isOpened" @close="close_pop_up" @import="handleImport"/>
-    <div class="flex items-center justify-center w-full">
-
-        <div v-if="imported_tasks" class="bg-white border border-slate-200 rounded-xl p-6 flex flex-col gap-4 w-1/2">
-            <h3 class="text-lg font-semibold text-slate-800">Imported tasks: {{ imported_tasks.length }}</h3>
-            <div class="border border-slate-200 rounded-lg p-4 bg-slate-50 flex flex-col gap-2" v-for="(t, i) in imported_tasks" :key="i">
-                <p class="text-sm text-slate-800"><b>{{ i + 1 }}.</b> {{ t.task }}</p>
-                <ul class="flex flex-col gap-1 pl-5 list-disc">
-                    <li v-for="(a, j) in t.answers" :key="j" class="text-sm" :class="a.isCorrect ? 'text-[#6db98a] font-medium' : 'text-slate-500'">
-                        {{ a.text }} {{ a.isCorrect ? '✓' : '' }}
-                    </li>
-                </ul>
-            </div>
-            <section class="flex gap-3 justify-center">
-                <button class="self-center py-2.5 px-13.75 bg-[#5d98b6] hover:bg-[#368bb7] active:translate-y-px text-white font-semibold border-none rounded-lg text-[22px] shadow-sm hover:shadow-md cursor-pointer transition-all" @click="submit_imported">Save all</button>
-                <button class="py-2.5 px-6 bg-transparent border border-slate-200 rounded-lg text-sm text-slate-500 cursor-pointer hover:bg-slate-50 transition-colors" @click="cancel_import">Cancel</button>
-            </section>
+    <div class="flex flex-col gap-4">
+        <div class="text-sm text-slate-500">
+            tasks in db: <b class="text-slate-800">{{ task_num }}</b>
         </div>
 
-        <!-- режим ручного додавання -->
-        <div v-else class="bg-white border border-slate-200 rounded-xl p-6 flex flex-col gap-4 w-1/2">
-            <input class="task input w-full" type="text" v-model="task_text" placeholder="type task here">
-            <div class="flex flex-row items-start gap-3">
-                <section class="flex flex-col gap-2.5 flex-1">
-                    <div class="flex items-center gap-2.5 py-2.5 px-3.5 border-2 border-emerald-100 rounded-2xl bg-white min-w-50" v-for="(answer, index) in answer_arr" :key="index">
-                        <input class="flex-1 border-none bg-transparent text-sm text-neutral-800 outline-none placeholder:text-neutral-400" type="text" v-model="answer.text" placeholder="type answer here">
-                        <input class="w-4.25 h-4.25 accent-emerald-500 cursor-pointer shrink-0" type="checkbox" v-model="answer.isCorrect">
-                    </div>
-                </section>
-                <section class="flex flex-col gap-2 pt-0.5">
-                    <button class="w-9 h-9 p-0 flex items-center justify-center text-xl rounded-lg bg-[#6db98a] hover:bg-[#5aa376] text-white border-none cursor-pointer transition-colors" @click="add_answer">+</button>
-                    <button class="w-9 h-9 p-0 flex items-center justify-center text-xl rounded-lg bg-[#b96d76] hover:bg-[#bb4e5b] text-white border-none cursor-pointer transition-colors" @click="delete_answer">-</button>
-                    <div class="flex items-center justify-center w-9 h-9 rounded-lg border border-slate-200 text-slate-500 cursor-pointer transition-colors hover:bg-slate-50 hover:text-slate-800" @click="open_pop_up">
-                        <Icon :name="icon_name" />
-                    </div>
-                </section>
-            </div>
-            <button class="self-center py-2.5 px-13.75 bg-[#5d98b6] hover:bg-[#368bb7] active:translate-y-px text-white font-semibold border-none rounded-lg text-[22px] shadow-sm hover:shadow-md cursor-pointer transition-all" @click="submit">Add</button>
-        </div>
+        <!-- Material (по желанию) -->
+        <fieldset class="flex flex-col gap-3 rounded-xl border border-slate-200 p-4">
+            <label class="flex items-center gap-2">
+                <input type="checkbox" v-model="attachMaterial" />
+                Attach questions to a material
+            </label>
 
+            <template v-if="attachMaterial">
+                <label class="flex items-center gap-2">
+                    Kind:
+                    <select v-model="material.kind">
+                        <option value="text">Text</option>
+                        <option value="audio">Audio</option>
+                    </select>
+                </label>
+
+                <input
+                    v-model="material.title"
+                    class="input"
+                    placeholder="Material title"
+                />
+
+                <textarea
+                    v-if="material.kind === 'text'"
+                    v-model="material.body"
+                    rows="5"
+                    class="input"
+                    placeholder="Text body"
+                ></textarea>
+                <input v-else type="file" accept="audio/*" @change="onFile" />
+            </template>
+        </fieldset>
+
+        <!-- Questions -->
+        <fieldset class="flex flex-col gap-4 rounded-xl border border-slate-200 p-4">
+            <legend class="px-1 text-sm text-slate-500">Questions</legend>
+
+            <div
+                v-for="(task, ti) in tasks"
+                :key="ti"
+                class="flex flex-col gap-2 rounded-lg border border-slate-200 p-3"
+            >
+                <div class="flex gap-2">
+                    <input
+                        v-model="task.task_text"
+                        class="input flex-1"
+                        placeholder="Question"
+                    />
+                    <select v-model="task.type">
+                        <option value="single_choice">Single choice</option>
+                        <option value="multiple_choice">Multiple choice</option>
+                    </select>
+                    <button type="button" @click="removeTask(ti)">remove</button>
+                </div>
+
+                <div
+                    v-for="(opt, oi) in task.options"
+                    :key="oi"
+                    class="flex items-center gap-2"
+                >
+                    <input
+                        v-model="opt.text"
+                        class="input flex-1"
+                        placeholder="Option"
+                    />
+                    <label class="flex items-center gap-1 whitespace-nowrap">
+                        <input type="checkbox" v-model="opt.isCorrect" /> correct
+                    </label>
+                    <button type="button" @click="removeOption(ti, oi)">x</button>
+                </div>
+
+                <button type="button" @click="addOption(ti)">+ option</button>
+            </div>
+
+            <button type="button" @click="addTask">+ question</button>
+        </fieldset>
+
+        <button class="btn w-fit" :disabled="saving" @click="save">
+            {{ saving ? 'Saving...' : 'Save' }}
+        </button>
+        <p v-if="message">{{ message }}</p>
     </div>
 </template>
 
 <script setup lang="ts">
-import PopUpFileInput from '~/components/PopUpFileInput.vue'
-import type { Database } from '~/types/database.types'
+import type { Database } from '~/types/database.types';
 
-const supabase = useSupabaseClient<Database>()
+const supabase = useSupabaseClient<Database>();
 
-const icon_name:string = "lucide:file-text"
+type Option = { text: string; isCorrect: boolean };
+type TaskForm = {
+    task_text: string;
+    type: 'single_choice' | 'multiple_choice';
+    options: Option[];
+};
 
-const isOpened = ref<boolean>(false)
-
-type Answer = {
-    text: string,
-    isCorrect: boolean
-}
-type SubBody = {
-    task: string,
-    answers: Answer[],
-    type: string
-}
-type ParsedTask = { task: string; answers: Answer[]; type: string }
-
-let task_text:Ref<string> = ref("")
-
-const answer_arr = ref<Answer[]>([
-    {text:"", isCorrect:false},
-    {text:"", isCorrect:false},
-    {text:"", isCorrect:false},
-])
-
-const task_num = ref<number>(0)
-
-onMounted(async () => {
-    await task_num_display()
-})
-
-
-
-const imported_tasks = ref<ParsedTask[] | null>(null)
-
-function handleImport(tasks: ParsedTask[]) {
-    imported_tasks.value = tasks
+function emptyTask(): TaskForm {
+    return {
+        task_text: '',
+        type: 'single_choice',
+        options: [
+            { text: '', isCorrect: false },
+            { text: '', isCorrect: false },
+        ],
+    };
 }
 
-function cancel_import() {
-    imported_tasks.value = null
-}
+const attachMaterial = ref(false);
+const material = ref({
+    kind: 'text' as 'text' | 'audio',
+    title: '',
+    body: '',
+    file: null as File | null,
+});
 
-async function submit_imported() {
-    if (!imported_tasks.value) return
-    try {
-        for (const t of imported_tasks.value) {
-            await saveTask(t)
-        }
-    } catch (err) {
-        console.log(err)
-    }
-    imported_tasks.value = null
-    task_num_display()
-}
+const tasks = ref<TaskForm[]>([emptyTask()]);
+const saving = ref(false);
+const message = ref('');
+const task_num = ref(0);
 
-// Прямая запись в Supabase: задача + её варианты ответов.
-// RLS-политика tasks_admin_write / answers_admin_write пропустит insert
-// только если is_admin() === true.
-async function saveTask(t: SubBody) {
-    const { data: task, error } = await supabase
-        .from('tasks')
-        .insert({ task_text: t.task, task_type: t.type })
-        .select('id')
-        .single()
-    if (error || !task) throw error ?? new Error('task not created')
+onMounted(task_num_display);
 
-    const { error: answersError } = await supabase
-        .from('answers')
-        .insert(
-            t.answers.map(a => ({
-                answer: a.text,
-                isCorrect: a.isCorrect,
-                task_id: task.id,
-            })),
-        )
-    if (answersError) throw answersError
-}
-
-function clear_form() {
-    task_text.value = ''
-    answer_arr.value = [
-        { text: '', isCorrect: false },
-        { text: '', isCorrect: false },
-        { text: '', isCorrect: false },
-    ]
-}
-
-async function task_num_display(){
+async function task_num_display() {
     const { count } = await supabase
         .from('tasks')
-        .select('*', { count: 'exact', head: true })
-    task_num.value = count ?? 0
+        .select('*', { count: 'exact', head: true });
+    task_num.value = count ?? 0;
 }
 
-function add_answer() {
-    answer_arr.value.push({text:"", isCorrect:false})
+function onFile(e: Event) {
+    material.value.file = (e.target as HTMLInputElement).files?.[0] ?? null;
 }
 
-function delete_answer() {
-    answer_arr.value.pop()
+function addTask() {
+    tasks.value.push(emptyTask());
+}
+function removeTask(i: number) {
+    tasks.value.splice(i, 1);
+}
+function addOption(ti: number) {
+    tasks.value[ti]!.options.push({ text: '', isCorrect: false });
+}
+function removeOption(ti: number, oi: number) {
+    tasks.value[ti]!.options.splice(oi, 1);
 }
 
-function form_submit_body() {
-    const form_body:SubBody = {
-        task:"",
-        answers:[],
-        type:"test"
-    }
-    let signal = false
-    const task = document.querySelector<HTMLInputElement>(".task")
-        console.log(task)
-        if (task && task.value != "") {
-            form_body.task = task.value
-        } else {
-            console.log("task element not found")
-        }
-        
-        form_body.answers = answer_arr.value
-        signal = answer_arr.value.some(answer => answer.text === "") 
-        || answer_arr.value[0] === undefined 
-        || !answer_arr.value.some(answer => answer.isCorrect)
-        
-        return {form_body, signal}
-}
-
-async function submit(){
-    const {form_body, signal} = form_submit_body()
-    if(signal){
-        alert("fill all inputs")
-        return
-    }
+async function save() {
+    saving.value = true;
+    message.value = '';
     try {
-        await saveTask(form_body)
-    } catch (err) {
-        console.log(err)
-        alert("Failed to save task")
-        return
+        // 1. Материал — только если включена галочка
+        let materialId: number | null = null;
+        if (attachMaterial.value) {
+            if (!material.value.title.trim())
+                throw new Error('Material title is required');
+
+            let fileUrl: string | null = null;
+            if (material.value.kind === 'audio') {
+                if (!material.value.file)
+                    throw new Error('Audio file is required');
+                const path = `audio/${Date.now()}-${material.value.file.name}`;
+                const { error: uploadError } = await supabase.storage
+                    .from('materials')
+                    .upload(path, material.value.file);
+                if (uploadError) throw uploadError;
+                fileUrl = supabase.storage.from('materials').getPublicUrl(path)
+                    .data.publicUrl;
+            }
+
+            const { data: mat, error: matError } = await supabase
+                .from('materials')
+                .insert({
+                    kind: material.value.kind,
+                    title: material.value.title,
+                    body:
+                        material.value.kind === 'text'
+                            ? material.value.body
+                            : null,
+                    file_url: fileUrl,
+                })
+                .select('id')
+                .single();
+            if (matError || !mat)
+                throw matError ?? new Error('material not created');
+            materialId = mat.id;
+        }
+
+        // 2. Вопросы (с material_id или без — самостоятельные)
+        for (const t of tasks.value) {
+            const { data: task, error: taskError } = await supabase
+                .from('tasks')
+                .insert({
+                    material_id: materialId,
+                    task_text: t.task_text,
+                    type: t.type,
+                })
+                .select('id')
+                .single();
+            if (taskError || !task)
+                throw taskError ?? new Error('task not created');
+
+            if (t.options.length) {
+                const { error: optError } = await supabase.from('answers').insert(
+                    t.options.map(o => ({
+                        answer: o.text,
+                        isCorrect: o.isCorrect,
+                        task_id: task.id,
+                    })),
+                );
+                if (optError) throw optError;
+            }
+        }
+
+        message.value = 'Saved!';
+        attachMaterial.value = false;
+        material.value = { kind: 'text', title: '', body: '', file: null };
+        tasks.value = [emptyTask()];
+        task_num_display();
+    } catch (err: unknown) {
+        console.error(err);
+        message.value =
+            'Error: ' + (err instanceof Error ? err.message : 'failed');
+    } finally {
+        saving.value = false;
     }
-    clear_form()
-    task_num_display()
 }
-
-function open_pop_up () {
-    isOpened.value = true
-}
-
-function close_pop_up () {
-    isOpened.value = false
-}
-
 </script>
