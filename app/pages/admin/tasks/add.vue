@@ -25,12 +25,12 @@
 
         <!-- режим ручного додавання -->
         <div v-else class="bg-white border border-slate-200 rounded-xl p-6 flex flex-col gap-4 w-1/2">
-            <input class="task w-full py-2.5 px-3.5 border border-slate-200 rounded-lg text-[15px] text-slate-800 outline-none transition-colors box-border focus:border-[#6db98a] placeholder:text-slate-400" type="text" v-model="task_text" placeholder="type task here">
+            <input class="task input w-full" type="text" v-model="task_text" placeholder="type task here">
             <div class="flex flex-row items-start gap-3">
                 <section class="flex flex-col gap-2.5 flex-1">
-                    <div class="flex items-center gap-2.5 py-2.5 px-3.5 border border-slate-200 rounded-lg bg-slate-50 min-w-50" v-for="(answer, index) in answer_arr" :key="index">
-                        <input class="flex-1 border-none bg-transparent text-sm text-slate-800 outline-none placeholder:text-slate-400" type="text" v-model="answer.text" placeholder="type answer here">
-                        <input class="w-4.25 h-4.25 accent-[#6db98a] cursor-pointer shrink-0" type="checkbox" v-model="answer.isCorrect">
+                    <div class="flex items-center gap-2.5 py-2.5 px-3.5 border-2 border-emerald-100 rounded-2xl bg-white min-w-50" v-for="(answer, index) in answer_arr" :key="index">
+                        <input class="flex-1 border-none bg-transparent text-sm text-neutral-800 outline-none placeholder:text-neutral-400" type="text" v-model="answer.text" placeholder="type answer here">
+                        <input class="w-4.25 h-4.25 accent-emerald-500 cursor-pointer shrink-0" type="checkbox" v-model="answer.isCorrect">
                     </div>
                 </section>
                 <section class="flex flex-col gap-2 pt-0.5">
@@ -49,19 +49,22 @@
 
 <script setup lang="ts">
 import PopUpFileInput from '~/components/PopUpFileInput.vue'
+import type { Database } from '~/types/database.types'
+
+const supabase = useSupabaseClient<Database>()
 
 const icon_name:string = "lucide:file-text"
 
 const isOpened = ref<boolean>(false)
 
 type Answer = {
-    text:String,
-    isCorrect:Boolean
+    text: string,
+    isCorrect: boolean
 }
 type SubBody = {
-    task:String,
-    answers:Answer[],
-    type:String
+    task: string,
+    answers: Answer[],
+    type: string
 }
 type ParsedTask = { task: string; answers: Answer[]; type: string }
 
@@ -95,17 +98,36 @@ async function submit_imported() {
     if (!imported_tasks.value) return
     try {
         for (const t of imported_tasks.value) {
-            await fetch("/api/admin/task/task", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(t)
-            })
+            await saveTask(t)
         }
     } catch (err) {
         console.log(err)
     }
     imported_tasks.value = null
     task_num_display()
+}
+
+// Прямая запись в Supabase: задача + её варианты ответов.
+// RLS-политика tasks_admin_write / answers_admin_write пропустит insert
+// только если is_admin() === true.
+async function saveTask(t: SubBody) {
+    const { data: task, error } = await supabase
+        .from('tasks')
+        .insert({ task_text: t.task, task_type: t.type })
+        .select('id')
+        .single()
+    if (error || !task) throw error ?? new Error('task not created')
+
+    const { error: answersError } = await supabase
+        .from('answers')
+        .insert(
+            t.answers.map(a => ({
+                answer: a.text,
+                isCorrect: a.isCorrect,
+                task_id: task.id,
+            })),
+        )
+    if (answersError) throw answersError
 }
 
 function clear_form() {
@@ -118,11 +140,10 @@ function clear_form() {
 }
 
 async function task_num_display(){
-    const data = await $fetch("/api/admin/task/task", {
-        method:"GET"
-    })
-    if (data?.values === undefined) throw new Error
-    task_num.value = data?.length
+    const { count } = await supabase
+        .from('tasks')
+        .select('*', { count: 'exact', head: true })
+    task_num.value = count ?? 0
 }
 
 function add_answer() {
@@ -163,16 +184,11 @@ async function submit(){
         return
     }
     try {
-        const data = await fetch("/api/admin/task/task", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(form_body)
-        })
-        console.log("data:", data)
+        await saveTask(form_body)
     } catch (err) {
         console.log(err)
+        alert("Failed to save task")
+        return
     }
     clear_form()
     task_num_display()

@@ -71,7 +71,7 @@
                     <input
                         v-model="newUsername"
                         type="text"
-                        class="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-gray-400 w-64"
+                        class="input w-64"
                     />
                     <button
                         @click="saveUsername"
