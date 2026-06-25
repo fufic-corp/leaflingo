@@ -5,7 +5,9 @@
         </div>
 
         <!-- Material (по желанию) -->
-        <fieldset class="flex flex-col gap-3 rounded-xl border border-slate-200 p-4">
+        <fieldset
+            class="flex flex-col gap-3 rounded-xl border border-slate-200 p-4"
+        >
             <label class="flex items-center gap-2">
                 Material:
                 <select v-model="materialMode">
@@ -22,7 +24,11 @@
                 class="input"
             >
                 <option :value="null" disabled>Select a material…</option>
-                <option v-for="m in existingMaterials" :key="m.id" :value="m.id">
+                <option
+                    v-for="m in existingMaterials"
+                    :key="m.id"
+                    :value="m.id"
+                >
                     {{ m.title }} ({{ m.kind }})
                 </option>
             </select>
@@ -55,7 +61,9 @@
         </fieldset>
 
         <!-- Questions -->
-        <fieldset class="flex flex-col gap-4 rounded-xl border border-slate-200 p-4">
+        <fieldset
+            class="flex flex-col gap-4 rounded-xl border border-slate-200 p-4"
+        >
             <legend class="px-1 text-sm text-slate-500">Questions</legend>
 
             <div
@@ -73,7 +81,9 @@
                         <option value="single_choice">Single choice</option>
                         <option value="multiple_choice">Multiple choice</option>
                     </select>
-                    <button type="button" @click="removeTask(ti)">remove</button>
+                    <button type="button" @click="removeTask(ti)">
+                        remove
+                    </button>
                 </div>
 
                 <div
@@ -87,9 +97,12 @@
                         placeholder="Option"
                     />
                     <label class="flex items-center gap-1 whitespace-nowrap">
-                        <input type="checkbox" v-model="opt.isCorrect" /> correct
+                        <input type="checkbox" v-model="opt.isCorrect" />
+                        correct
                     </label>
-                    <button type="button" @click="removeOption(ti, oi)">x</button>
+                    <button type="button" @click="removeOption(ti, oi)">
+                        x
+                    </button>
                 </div>
 
                 <button type="button" @click="addOption(ti)">+ option</button>
@@ -185,8 +198,16 @@ function removeOption(ti: number, oi: number) {
 async function save() {
     saving.value = true;
     message.value = '';
+
     try {
-        // 1. Материал: none / existing / new
+        // Check if all questions have at least one correct answer
+        for (const [i, t] of tasks.value.entries()) {
+            if (!t.options.some(o => o.isCorrect)) {
+                throw new Error(`Question ${i + 1}: mark at least one correct`);
+            }
+        }
+
+        // 1. Material
         let materialId: number | null = null;
         if (materialMode.value === 'existing') {
             if (selectedMaterialId.value == null)
@@ -227,7 +248,7 @@ async function save() {
             materialId = mat.id;
         }
 
-        // 2. Вопросы (с material_id или без — самостоятельные)
+        // 2. Questions
         for (const t of tasks.value) {
             const { data: task, error: taskError } = await supabase
                 .from('tasks')
@@ -242,13 +263,15 @@ async function save() {
                 throw taskError ?? new Error('task not created');
 
             if (t.options.length) {
-                const { error: optError } = await supabase.from('answers').insert(
-                    t.options.map(o => ({
-                        answer: o.text,
-                        isCorrect: o.isCorrect,
-                        task_id: task.id,
-                    })),
-                );
+                const { error: optError } = await supabase
+                    .from('answers')
+                    .insert(
+                        t.options.map(o => ({
+                            answer: o.text,
+                            isCorrect: o.isCorrect,
+                            task_id: task.id,
+                        })),
+                    );
                 if (optError) throw optError;
             }
         }
