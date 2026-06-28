@@ -4,6 +4,14 @@
             tasks in db: <b class="text-slate-800">{{ task_num }}</b>
         </div>
 
+        <label class="flex items-center gap-2">
+            Exam:
+            <select v-model="selectedExam">
+                <option value="ielts">IELTS</option>
+                <option value="testdaf">TestDaF</option>
+            </select>
+        </label>
+
         <!-- Material (по желанию) -->
         <fieldset
             class="flex flex-col gap-3 rounded-xl border border-slate-200 p-4"
@@ -142,6 +150,7 @@ function emptyTask(): TaskForm {
 }
 
 const materialMode = ref<'none' | 'new' | 'existing'>('none');
+const selectedExam = ref<'ielts' | 'testdaf'>('ielts');
 const existingMaterials = ref<{ id: number; title: string; kind: string }[]>(
     [],
 );
@@ -253,6 +262,7 @@ async function save() {
             const { data: task, error: taskError } = await supabase
                 .from('tasks')
                 .insert({
+                    exam: selectedExam.value,
                     material_id: materialId,
                     task_text: t.task_text,
                     type: t.type,

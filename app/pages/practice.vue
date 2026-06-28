@@ -3,7 +3,7 @@
         <div v-if="loading" class="text-neutral-400">Loading…</div>
 
         <div v-else-if="!current" class="text-neutral-400">
-            No questions in the database yet.
+            No questions for this exam yet.
         </div>
 
         <template v-else>
@@ -80,6 +80,7 @@
 import type { Database } from '~/types/database.types';
 
 const supabase = useSupabaseClient<Database>();
+const examStore = useExamStore();
 
 type Opt = { id: number; answer: string | null; isCorrect: boolean | null };
 type Material = {
@@ -105,11 +106,21 @@ const correctCount = ref(0);
 
 let lastId: number | null = null;
 
-onMounted(async () => {
-    const { data } = await supabase.from('tasks').select('id');
+onMounted(loadExam);
+watch(() => examStore.exam, loadExam);
+
+async function loadExam() {
+    loading.value = true;
+    const { data } = await supabase
+        .from('tasks')
+        .select('id')
+        .eq('exam', examStore.exam);
     ids.value = (data ?? []).map(d => d.id);
+    lastId = null;
+    answeredCount.value = 0;
+    correctCount.value = 0;
     await loadNext();
-});
+}
 
 function pickRandomId(): number | null {
     if (!ids.value.length) return null;

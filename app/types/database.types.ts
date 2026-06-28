@@ -95,6 +95,7 @@ export type Database = {
       tasks: {
         Row: {
           created_at: string
+          exam: string
           id: number
           material_id: number | null
           task_text: string | null
@@ -102,6 +103,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          exam?: string
           id?: number
           material_id?: number | null
           task_text?: string | null
@@ -109,6 +111,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          exam?: string
           id?: number
           material_id?: number | null
           task_text?: string | null

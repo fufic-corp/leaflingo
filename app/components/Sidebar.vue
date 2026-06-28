@@ -24,13 +24,17 @@
 
             <div class="mx-3 my-2 border-t border-emerald-100" />
 
-            <SidebarNavItem
-                v-for="item in navItems"
-                :key="item.href"
-                :href="item.href"
-                :label="item.label"
-                :icon="item.icon"
-            />
+            <ExamSwitcher v-model:open="examOpen" />
+
+            <template v-if="!examOpen">
+                <SidebarNavItem
+                    v-for="item in navItems"
+                    :key="item.href"
+                    :href="item.href"
+                    :label="item.label"
+                    :icon="item.icon"
+                />
+            </template>
         </nav>
 
         <!-- Bottom -->
@@ -49,6 +53,8 @@
 <script setup lang="ts">
 const supabase = useSupabaseClient();
 const profileStore = useProfileStore();
+
+const examOpen = ref(false);
 
 const navItemsUser = [
     { href: '/', label: 'Dashboard', icon: 'tabler:layout-dashboard' },
