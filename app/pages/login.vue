@@ -64,6 +64,6 @@ async function login() {
         password: password.value,
     });
     if (error) return console.error(error);
-    navigateTo('/');
+    navigateTo('/', {replace:true});
 }
 </script>
