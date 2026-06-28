@@ -25,7 +25,6 @@
                 </select>
             </label>
 
-            <!-- выбор существующего -->
             <select
                 v-if="materialMode === 'existing'"
                 v-model="selectedMaterialId"
@@ -48,6 +47,7 @@
                     <select v-model="material.kind">
                         <option value="text">Text</option>
                         <option value="audio">Audio</option>
+                        <option value="video">Video</option>
                     </select>
                 </label>
 
@@ -64,7 +64,12 @@
                     class="input"
                     placeholder="Text body"
                 ></textarea>
-                <input v-else type="file" accept="audio/*" @change="onFile" />
+                <input
+                    v-else
+                    type="file"
+                    :accept="material.kind === 'video' ? 'video/*' : 'audio/*'"
+                    @change="onFile"
+                />
             </template>
         </fieldset>
 
@@ -156,7 +161,7 @@ const existingMaterials = ref<{ id: number; title: string; kind: string }[]>(
 );
 const selectedMaterialId = ref<number | null>(null);
 const material = ref({
-    kind: 'text' as 'text' | 'audio',
+    kind: 'text' as 'text' | 'audio' | 'video',
     title: '',
     body: '',
     file: null as File | null,
@@ -227,10 +232,10 @@ async function save() {
                 throw new Error('Material title is required');
 
             let fileUrl: string | null = null;
-            if (material.value.kind === 'audio') {
+            if (material.value.kind !== 'text') {
                 if (!material.value.file)
-                    throw new Error('Audio file is required');
-                const path = `audio/${Date.now()}-${material.value.file.name}`;
+                    throw new Error('A file is required');
+                const path = `${material.value.kind}/${Date.now()}-${material.value.file.name}`;
                 const { error: uploadError } = await supabase.storage
                     .from('materials')
                     .upload(path, material.value.file);
