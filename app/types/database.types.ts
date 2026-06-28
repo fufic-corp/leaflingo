@@ -42,6 +42,7 @@ export type Database = {
         Row: {
           body: string | null
           created_at: string
+          created_by: string | null
           file_url: string | null
           id: number
           kind: string
@@ -50,6 +51,7 @@ export type Database = {
         Insert: {
           body?: string | null
           created_at?: string
+          created_by?: string | null
           file_url?: string | null
           id?: number
           kind: string
@@ -58,12 +60,21 @@ export type Database = {
         Update: {
           body?: string | null
           created_at?: string
+          created_by?: string | null
           file_url?: string | null
           id?: number
           kind?: string
           title?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "materials_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -95,6 +106,7 @@ export type Database = {
       tasks: {
         Row: {
           created_at: string
+          created_by: string | null
           exam: string
           id: number
           material_id: number | null
@@ -103,6 +115,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          created_by?: string | null
           exam?: string
           id?: number
           material_id?: number | null
@@ -111,6 +124,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          created_by?: string | null
           exam?: string
           id?: number
           material_id?: number | null
@@ -123,6 +137,13 @@ export type Database = {
             columns: ["material_id"]
             isOneToOne: false
             referencedRelation: "materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
