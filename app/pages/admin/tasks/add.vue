@@ -93,32 +93,62 @@
                     <select v-model="task.type">
                         <option value="single_choice">Single choice</option>
                         <option value="multiple_choice">Multiple choice</option>
+                        <option value="fill_blank">Fill in the blank</option>
                     </select>
                     <button type="button" @click="removeTask(ti)">
                         remove
                     </button>
                 </div>
 
-                <div
-                    v-for="(opt, oi) in task.options"
-                    :key="oi"
-                    class="flex items-center gap-2"
-                >
-                    <input
-                        v-model="opt.text"
-                        class="input flex-1"
-                        placeholder="Option"
-                    />
-                    <label class="flex items-center gap-1 whitespace-nowrap">
-                        <input type="checkbox" v-model="opt.isCorrect" />
-                        correct
-                    </label>
-                    <button type="button" @click="removeOption(ti, oi)">
-                        x
-                    </button>
-                </div>
+                <!-- choice -->
+                <template v-if="task.type !== 'fill_blank'">
+                    <div
+                        v-for="(opt, oi) in task.options"
+                        :key="oi"
+                        class="flex items-center gap-2"
+                    >
+                        <input
+                            v-model="opt.text"
+                            class="input flex-1"
+                            placeholder="Option"
+                        />
+                        <label class="flex items-center gap-1 whitespace-nowrap">
+                            <input type="checkbox" v-model="opt.isCorrect" />
+                            correct
+                        </label>
+                        <button type="button" @click="removeOption(ti, oi)">
+                            x
+                        </button>
+                    </div>
 
-                <button type="button" @click="addOption(ti)">+ option</button>
+                    <button type="button" @click="addOption(ti)">
+                        + option
+                    </button>
+                </template>
+
+                <!-- fill in the blank -->
+                <template v-else>
+                    <textarea
+                        v-model="task.fillText"
+                        rows="3"
+                        class="input"
+                        placeholder="Sentence with gaps, e.g. The Wall {1} built over {2} years."
+                    ></textarea>
+                    <div
+                        v-for="n in blanksOf(task)"
+                        :key="n"
+                        class="flex items-center gap-2"
+                    >
+                        <span class="w-8 text-sm text-slate-500"
+                            >{{ '{' + n + '}' }}</span
+                        >
+                        <input
+                            v-model="task.accepts[n - 1]"
+                            class="input flex-1"
+                            placeholder="Accepted answers, comma-separated"
+                        />
+                    </div>
+                </template>
             </div>
 
             <button type="button" @click="addTask">+ question</button>
@@ -139,8 +169,10 @@ const supabase = useSupabaseClient<Database>();
 type Option = { text: string; isCorrect: boolean };
 type TaskForm = {
     task_text: string;
-    type: 'single_choice' | 'multiple_choice';
+    type: 'single_choice' | 'multiple_choice' | 'fill_blank';
     options: Option[];
+    fillText: string;
+    accepts: string[]; // по пропуску: принимаемые ответы через запятую
 };
 
 function emptyTask(): TaskForm {
@@ -151,7 +183,15 @@ function emptyTask(): TaskForm {
             { text: '', isCorrect: false },
             { text: '', isCorrect: false },
         ],
+        fillText: '',
+        accepts: [],
     };
+}
+
+// номера пропусков {n} из текста (уникальные, по возрастанию)
+function blanksOf(t: TaskForm): number[] {
+    const nums = [...t.fillText.matchAll(/\{(\d+)\}/g)].map(m => Number(m[1]));
+    return [...new Set(nums)].sort((a, b) => a - b);
 }
 
 const materialMode = ref<'none' | 'new' | 'existing'>('none');
@@ -214,9 +254,17 @@ async function save() {
     message.value = '';
 
     try {
-        // Check if all questions have at least one correct answer
+        // Валидация по типу вопроса
         for (const [i, t] of tasks.value.entries()) {
-            if (!t.options.some(o => o.isCorrect)) {
+            if (t.type === 'fill_blank') {
+                const nums = blanksOf(t);
+                if (!nums.length)
+                    throw new Error(`Question ${i + 1}: add at least one {n} gap`);
+                if (nums.some(n => !(t.accepts[n - 1] ?? '').trim()))
+                    throw new Error(
+                        `Question ${i + 1}: fill accepted answers for every gap`,
+                    );
+            } else if (!t.options.some(o => o.isCorrect)) {
                 throw new Error(`Question ${i + 1}: mark at least one correct`);
             }
         }
@@ -262,33 +310,34 @@ async function save() {
             materialId = mat.id;
         }
 
-        // 2. Questions
+        // 2. Questions — содержимое лежит в content (документная модель)
         for (const t of tasks.value) {
-            const { data: task, error: taskError } = await supabase
-                .from('tasks')
-                .insert({
-                    exam: selectedExam.value,
-                    material_id: materialId,
-                    task_text: t.task_text,
-                    type: t.type,
-                })
-                .select('id')
-                .single();
-            if (taskError || !task)
-                throw taskError ?? new Error('task not created');
+            const content =
+                t.type === 'fill_blank'
+                    ? {
+                          text: t.fillText,
+                          blanks: blanksOf(t).map(n => ({
+                              accept: (t.accepts[n - 1] ?? '')
+                                  .split(',')
+                                  .map(s => s.trim())
+                                  .filter(Boolean),
+                          })),
+                      }
+                    : {
+                          options: t.options.map(o => ({
+                              text: o.text,
+                              correct: o.isCorrect,
+                          })),
+                      };
 
-            if (t.options.length) {
-                const { error: optError } = await supabase
-                    .from('answers')
-                    .insert(
-                        t.options.map(o => ({
-                            answer: o.text,
-                            isCorrect: o.isCorrect,
-                            task_id: task.id,
-                        })),
-                    );
-                if (optError) throw optError;
-            }
+            const { error: taskError } = await supabase.from('tasks').insert({
+                exam: selectedExam.value,
+                material_id: materialId,
+                task_text: t.task_text,
+                type: t.type,
+                content,
+            });
+            if (taskError) throw taskError;
         }
 
         message.value = 'Saved!';

@@ -105,6 +105,7 @@ export type Database = {
       }
       tasks: {
         Row: {
+          content: Json | null
           created_at: string
           created_by: string | null
           exam: string
@@ -114,6 +115,7 @@ export type Database = {
           type: string
         }
         Insert: {
+          content?: Json | null
           created_at?: string
           created_by?: string | null
           exam?: string
@@ -123,6 +125,7 @@ export type Database = {
           type?: string
         }
         Update: {
+          content?: Json | null
           created_at?: string
           created_by?: string | null
           exam?: string
