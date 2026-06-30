@@ -111,6 +111,7 @@ export type Database = {
           exam: string
           id: number
           material_id: number | null
+          skill: string
           task_text: string | null
           type: string
         }
@@ -121,6 +122,7 @@ export type Database = {
           exam?: string
           id?: number
           material_id?: number | null
+          skill?: string
           task_text?: string | null
           type?: string
         }
@@ -131,6 +133,7 @@ export type Database = {
           exam?: string
           id?: number
           material_id?: number | null
+          skill?: string
           task_text?: string | null
           type?: string
         }

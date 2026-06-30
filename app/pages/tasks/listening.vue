@@ -1,5 +1,5 @@
 <template>
-    <div class="mx-auto flex max-w-xl flex-col gap-4">
+    <div class="flex w-full flex-col gap-5">
         <NuxtLink
             to="/practice"
             class="flex w-fit items-center gap-1 text-sm font-semibold text-emerald-600 transition-colors hover:text-emerald-500"
@@ -21,17 +21,29 @@
         />
 
         <template v-else-if="current">
-            <p class="text-xs font-semibold text-neutral-400">
-                Question {{ index + 1 }} / {{ items.length }}
-            </p>
+            <div class="flex items-center gap-3">
+                <div
+                    class="h-2 flex-1 overflow-hidden rounded-full bg-emerald-100"
+                >
+                    <div
+                        class="h-full rounded-full bg-emerald-500 transition-all"
+                        :style="{
+                            width: `${((index + 1) / items.length) * 100}%`,
+                        }"
+                    />
+                </div>
+                <span class="text-sm font-semibold text-neutral-400">
+                    {{ index + 1 }} / {{ items.length }}
+                </span>
+            </div>
 
             <!-- Audio recording or video clip -->
             <div
                 v-if="current.material"
-                class="rounded-2xl border-2 border-emerald-100 bg-white p-6"
+                class="rounded-2xl bg-emerald-50 p-6"
             >
                 <p
-                    class="mb-3 flex items-center gap-2 font-semibold text-neutral-800"
+                    class="mb-3 flex items-center gap-2 text-lg font-bold text-neutral-800"
                 >
                     <Icon
                         :name="

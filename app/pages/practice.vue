@@ -1,104 +1,73 @@
 <template>
-    <div class="mx-auto flex max-w-3xl flex-col gap-6">
-        <div>
-            <h1 class="text-2xl font-bold text-neutral-800">Choose a test</h1>
-            <p class="mt-1 text-sm text-neutral-400">
-                Pick the type of test you want to practice.
-            </p>
-        </div>
+    <div class="flex w-full flex-col gap-6">
+        <h1 class="text-2xl font-bold text-neutral-800">Practice</h1>
 
-        <div class="grid gap-4 sm:grid-cols-2">
-            <button
-                v-for="test in tests"
-                :key="test.value"
-                type="button"
-                class="flex items-start gap-4 rounded-2xl border-2 bg-white p-5 text-left transition-colors"
-                :class="
-                    selected === test.value
-                        ? 'border-emerald-400 bg-emerald-50'
-                        : 'border-emerald-100 hover:border-emerald-300'
-                "
-                @click="selected = test.value"
-            >
+        <template v-if="total">
+            <!-- состав набора: бар с разрывами -->
+            <div class="flex gap-2">
                 <div
-                    class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl transition-colors"
-                    :class="
-                        selected === test.value
-                            ? 'bg-emerald-500 text-white'
-                            : 'bg-emerald-100 text-emerald-600'
-                    "
+                    v-for="s in present"
+                    :key="s.key"
+                    class="flex min-w-0 basis-0 flex-col justify-center gap-1 rounded-2xl px-5 py-6 text-white"
+                    :class="s.bar"
+                    :style="{ flexGrow: s.count }"
                 >
-                    <Icon :name="test.icon" :size="26" />
+                    <span class="text-4xl font-bold">{{ s.count }}</span>
+                    <span
+                        class="truncate text-base font-semibold text-white/85"
+                    >
+                        {{ s.label }}
+                    </span>
                 </div>
-                <div class="min-w-0">
-                    <p class="font-semibold text-neutral-800">
-                        {{ test.label }}
-                    </p>
-                    <p class="mt-0.5 text-sm text-neutral-400">
-                        {{ test.description }}
-                    </p>
-                </div>
-            </button>
-        </div>
+            </div>
 
-        <button class="btn w-fit" :disabled="!selected" @click="start">
-            Start test
-        </button>
+            <button
+                class="flex w-fit items-center gap-2 rounded-2xl px-7 py-4 text-base font-bold text-white shadow-sm transition-transform hover:scale-105 active:scale-100"
+                style="
+                    background-image: linear-gradient(135deg, #10b981, #047857);
+                "
+                @click="navigateTo('/tasks/daily')"
+            >
+                Start daily practice
+                <Icon name="tabler:arrow-right" :size="18" />
+            </button>
+        </template>
+
+        <p v-else class="text-neutral-400">No questions for this exam yet.</p>
     </div>
 </template>
 
 <script setup lang="ts">
-type TestOption = {
-    value: string;
-    label: string;
-    description: string;
-    icon: string;
-};
+import type { Database } from '~/types/database.types';
 
-const tests: TestOption[] = [
-    {
-        value: './tasks/daily',
-        label: 'Daily Practice',
-        description: 'A quick mixed set of questions.',
-        icon: 'tabler:calendar',
-    },
-    {
-        value: './tasks/reading',
-        label: 'Reading',
-        description: 'Comprehension questions based on texts.',
-        icon: 'tabler:book',
-    },
-    {
-        value: './tasks/listening',
-        label: 'Listening',
-        description: 'Answer questions about audio and video.',
-        icon: 'tabler:headphones',
-    },
-    {
-        value: './tasks/writing',
-        label: 'Writing',
-        description: 'Practice structured written responses.',
-        icon: 'tabler:pencil',
-    },
-    {
-        value: './tasks/speaking',
-        label: 'Speaking',
-        description: 'Respond to prompts out loud.',
-        icon: 'tabler:microphone',
-    },
-    {
-        value: './tasks/mock',
-        label: 'Mock Exam',
-        description: 'Full timed test across all sections.',
-        icon: 'tabler:trophy',
-    },
-    
-];
+const supabase = useSupabaseClient<Database>();
+const examStore = useExamStore();
 
-const selected = ref<string | null>(null);
+const SKILLS = [
+    { key: 'reading', label: 'Reading', bar: 'bg-emerald-600' },
+    { key: 'listening', label: 'Listening', bar: 'bg-emerald-700' },
+    { key: 'writing', label: 'Writing', bar: 'bg-emerald-500' },
+    { key: 'speaking', label: 'Speaking', bar: 'bg-emerald-800' },
+] as const;
 
-function start() {
-    if (!selected.value) return;
-    navigateTo({ path: selected.value});
+const counts = ref<Record<string, number>>({});
+
+const skills = computed(() =>
+    SKILLS.map(s => ({ ...s, count: counts.value[s.key] ?? 0 })),
+);
+const present = computed(() => skills.value.filter(s => s.count > 0));
+const total = computed(() => present.value.reduce((a, s) => a + s.count, 0));
+
+onMounted(loadCounts);
+watch(() => examStore.exam, loadCounts);
+
+async function loadCounts() {
+    const { data } = await supabase
+        .from('tasks')
+        .select('skill')
+        .eq('exam', examStore.exam);
+    const c: Record<string, number> = {};
+    for (const row of data ?? []) c[row.skill] = (c[row.skill] ?? 0) + 1;
+    counts.value = c;
 }
 </script>

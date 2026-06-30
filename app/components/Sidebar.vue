@@ -1,5 +1,5 @@
 <template>
-    <aside class="flex flex-col w-64 bg-emerald-50/30">
+    <aside class="flex flex-col w-60 bg-emerald-50/30">
         <!-- Nav -->
         <nav class="flex flex-col p-3 flex-1">
             <!-- Profile nav item -->

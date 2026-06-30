@@ -4,13 +4,24 @@
             tasks in db: <b class="text-slate-800">{{ task_num }}</b>
         </div>
 
-        <label class="flex items-center gap-2">
-            Exam:
-            <select v-model="selectedExam">
-                <option value="ielts">IELTS</option>
-                <option value="testdaf">TestDaF</option>
-            </select>
-        </label>
+        <div class="flex flex-wrap gap-4">
+            <label class="flex items-center gap-2">
+                Exam:
+                <select v-model="selectedExam">
+                    <option value="ielts">IELTS</option>
+                    <option value="testdaf">TestDaF</option>
+                </select>
+            </label>
+            <label class="flex items-center gap-2">
+                Skill:
+                <select v-model="selectedSkill">
+                    <option value="reading">Reading</option>
+                    <option value="listening">Listening</option>
+                    <option value="writing">Writing</option>
+                    <option value="speaking">Speaking</option>
+                </select>
+            </label>
+        </div>
 
         <!-- Material (по желанию) -->
         <fieldset
@@ -196,6 +207,9 @@ function blanksOf(t: TaskForm): number[] {
 
 const materialMode = ref<'none' | 'new' | 'existing'>('none');
 const selectedExam = ref<'ielts' | 'testdaf'>('ielts');
+const selectedSkill = ref<'reading' | 'listening' | 'writing' | 'speaking'>(
+    'reading',
+);
 const existingMaterials = ref<{ id: number; title: string; kind: string }[]>(
     [],
 );
@@ -332,6 +346,7 @@ async function save() {
 
             const { error: taskError } = await supabase.from('tasks').insert({
                 exam: selectedExam.value,
+                skill: selectedSkill.value,
                 material_id: materialId,
                 task_text: t.task_text,
                 type: t.type,
