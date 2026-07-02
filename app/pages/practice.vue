@@ -1,134 +1,193 @@
 <template>
-    <div class="flex w-full flex-col gap-6">
-        <h1 class="text-2xl font-bold text-neutral-800">Practice</h1>
+    <div class="mx-auto flex w-full max-w-4xl flex-col gap-10 pt-6">
+        <!-- Header -->
+        <div class="text-center">
+            <p class="text-sm font-medium text-neutral-400">
+                {{ dateLabel }}
+            </p>
+            <h1
+                class="mt-1 text-3xl font-bold tracking-tight text-neutral-900"
+            >
+                Today's practice
+            </h1>
+        </div>
 
-        <template v-if="total">
-            <div class="flex gap-2">
-                <div
-                    v-for="s in present"
-                    :key="s.key"
-                    class="flex min-w-0 basis-0 flex-col justify-center gap-1 rounded-2xl px-5 py-6 text-white"
-                    :class="s.bar"
-                    :style="{ flexGrow: s.count }"
-                >
-                    <span class="text-4xl font-bold">{{ s.count }}</span>
-                    <span
-                        class="truncate text-base font-semibold text-white/85"
-                    >
-                        {{ s.label }}
-                    </span>
-                </div>
-            </div>
-
-            <button
-                class="flex w-fit items-center gap-2 rounded-2xl px-7 py-4 text-base font-bold text-white shadow-sm transition-transform hover:scale-105 active:scale-100"
-                style="
-                    background-image: linear-gradient(135deg, #10b981, #047857);
+        <!-- Session track -->
+        <div class="flex w-full gap-1.5">
+            <component
+                :is="part.status === 'ready' ? NuxtLink : 'div'"
+                v-for="part in visibleParts"
+                :key="part.key"
+                :to="part.status === 'ready' ? part.to : undefined"
+                class="flex h-32 min-w-16 basis-0 flex-col items-center justify-center gap-1.5 rounded-lg first:rounded-l-3xl last:rounded-r-3xl"
+                :class="
+                    part.status === 'ready'
+                        ? part.color +
+                          ' cursor-pointer text-white transition-all duration-150 hover:-translate-y-1 hover:shadow-lg'
+                        : 'bg-neutral-100 text-neutral-400'
                 "
-                @click="navigateTo('/tasks/daily')"
+                :style="{ flexGrow: part.minutes }"
             >
-                Start daily practice
-                <Icon name="tabler:arrow-right" :size="18" />
+                <Icon :name="part.icon" :size="24" />
+                <span class="text-sm font-semibold">{{ part.label }}</span>
+                <span class="text-xs opacity-70">
+                    {{
+                        part.status === 'ready'
+                            ? `~${part.minutes} min`
+                            : 'soon'
+                    }}
+                </span>
+            </component>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center justify-center gap-3">
+            <span
+                class="flex items-center gap-1.5 rounded-xl bg-neutral-100 px-4 py-3 text-sm font-semibold text-neutral-600"
+            >
+                <Icon name="tabler:clock-hour-3" :size="15" />
+                {{ totalMinutes }} min
+            </span>
+            <button
+                class="btn px-6 py-3"
+                :disabled="!totalTasks"
+                @click="navigateTo('/session/daily')"
+            >
+                <Icon name="tabler:player-play-filled" :size="15" />
+                Start session
             </button>
-        </template>
+        </div>
 
-        <p v-else class="text-neutral-400">No questions for this exam yet.</p>
-
-        <a
-            href="#"
-            class="flex w-fit items-center gap-2 rounded-2xl px-7 py-4 text-base font-bold text-white shadow-sm transition-transform hover:scale-105 active:scale-100"
-            :style="gradientStyle"
-        >
-            <Icon name="tabler:vocabulary" :size="18" />
-            Daily dictionary
-            <Icon name="tabler:arrow-right" :size="18" />
-        </a>
-
-        <div class="flex flex-col gap-3">
-            <h2
-                class="text-sm font-semibold uppercase tracking-wide text-neutral-400"
-            >
-                Practice by skill
+        <!-- Free practice -->
+        <div class="mt-4 flex flex-col gap-4">
+            <h2 class="text-lg font-bold tracking-tight text-neutral-900">
+                Practice any skill
             </h2>
-            <div class="flex flex-wrap gap-3">
-                <template v-for="s in skills" :key="s.key">
-                    <NuxtLink
-                        v-if="s.to !== '#'"
-                        :to="s.to"
-                        :class="skillLinkClass"
-                    >
-                        <Icon
-                            :name="s.icon"
-                            :size="20"
-                            class="text-emerald-600"
-                        />
-                        {{ s.label }}
-                    </NuxtLink>
-                    <a v-else href="#" :class="skillLinkClass">
-                        <Icon
-                            :name="s.icon"
-                            :size="20"
-                            class="text-emerald-300"
-                        />
-                        {{ s.label }}
-                    </a>
-                </template>
+            <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <NuxtLink
+                    v-for="skill in freeSkills"
+                    :key="skill.key"
+                    :to="skill.to"
+                    class="group flex flex-col items-start gap-3 rounded-2xl p-5 transition-all duration-150 hover:-translate-y-0.5"
+                    :class="skill.tile"
+                >
+                    <Icon :name="skill.icon" :size="26" />
+                    <span class="text-[15px] font-semibold">
+                        {{ skill.label }}
+                    </span>
+                </NuxtLink>
             </div>
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
+import { NuxtLink } from '#components';
 import type { Database } from '~/types/database.types';
 
 const supabase = useSupabaseClient<Database>();
 const examStore = useExamStore();
 
-const SKILLS = [
-   
+const counts = ref<Record<string, number>>({});
+
+const now = new Date();
+const dateLabel = `${now.toLocaleDateString('en-GB', { weekday: 'long' })}, ${now.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}`;
+
+type PartStatus = 'ready' | 'empty' | 'soon';
+type Part = {
+    key: string;
+    label: string;
+    icon: string;
+    color: string;
+    /* заливка плитки в секции свободной тренировки (только у ready-скиллов) */
+    tile?: string;
+    minutes: number;
+    to: string;
+    status: PartStatus;
+};
+
+// Части дневной сессии, по порядку прохождения. Ширина куска на треке
+// пропорциональна длительности. reading/listening требуют заданий в банке,
+// writing работает всегда, остальные части ещё не реализованы.
+const parts = computed<Part[]>(() => [
     {
         key: 'reading',
         label: 'Reading',
-        bar: 'bg-emerald-600',
         icon: 'tabler:book',
-        to: '/tasks/reading',
+        color: 'bg-emerald-600',
+        tile: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100',
+        minutes: 6,
+        to: '/session/reading',
+        status: (counts.value.reading ?? 0) > 0 ? 'ready' : 'empty',
     },
     {
         key: 'listening',
         label: 'Listening',
-        bar: 'bg-emerald-700',
         icon: 'tabler:headphones',
-        to: '/tasks/listening',
+        color: 'bg-teal-600',
+        tile: 'bg-teal-50 text-teal-700 hover:bg-teal-100',
+        minutes: 6,
+        to: '/session/listening',
+        status: (counts.value.listening ?? 0) > 0 ? 'ready' : 'empty',
     },
     {
         key: 'writing',
         label: 'Writing',
-        bar: 'bg-emerald-500',
         icon: 'tabler:pencil',
-        to: '/tasks/writing',
+        color: 'bg-cyan-600',
+        tile: 'bg-cyan-50 text-cyan-700 hover:bg-cyan-100',
+        minutes: 10,
+        to: '/session/writing',
+        status: 'ready',
+    },
+    {
+        key: 'grammar',
+        label: 'Grammar',
+        icon: 'tabler:abc',
+        color: 'bg-sky-600',
+        minutes: 4,
+        to: '#',
+        status: 'soon',
     },
     {
         key: 'speaking',
         label: 'Speaking',
-        bar: 'bg-emerald-800',
         icon: 'tabler:microphone',
+        color: 'bg-indigo-500',
+        minutes: 5,
         to: '#',
+        status: 'soon',
     },
-] as const;
+    {
+        key: 'words',
+        label: 'Words',
+        icon: 'tabler:cards',
+        color: 'bg-violet-500',
+        minutes: 3,
+        to: '#',
+        status: 'soon',
+    },
+]);
 
-const gradientStyle =
-    'background-image: linear-gradient(135deg, #10b981, #047857);';
-
-const skillLinkClass =
-    'flex items-center gap-2 rounded-2xl border-2 border-emerald-100 bg-white px-5 py-3 text-base font-semibold text-neutral-800 transition-colors hover:border-emerald-300';
-
-const counts = ref<Record<string, number>>({});
-
-const skills = computed(() =>
-    SKILLS.map(s => ({ ...s, count: counts.value[s.key] ?? 0 })),
+// Куски без заданий в банке (empty) в треке не показываем вовсе;
+// нереализованные (soon) остаются серыми, чтобы была видна структура сессии.
+const visibleParts = computed(() =>
+    parts.value.filter(p => p.status !== 'empty'),
 );
-const present = computed(() => skills.value.filter(s => s.count > 0));
-const total = computed(() => present.value.reduce((a, s) => a + s.count, 0));
+
+// Скиллы, доступные для свободной тренировки вне дневной сессии.
+const freeSkills = computed(() =>
+    parts.value.filter(p => p.status === 'ready'),
+);
+
+const totalMinutes = computed(() =>
+    parts.value
+        .filter(p => p.status === 'ready')
+        .reduce((a, p) => a + p.minutes, 0),
+);
+const totalTasks = computed(() =>
+    Object.values(counts.value).reduce((a, n) => a + n, 0),
+);
 
 onMounted(loadCounts);
 watch(() => examStore.exam, loadCounts);

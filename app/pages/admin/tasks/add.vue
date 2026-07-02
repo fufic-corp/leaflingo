@@ -124,7 +124,17 @@
                             placeholder="Option"
                         />
                         <label class="flex items-center gap-1 whitespace-nowrap">
-                            <input type="checkbox" v-model="opt.isCorrect" />
+                            <input
+                                :type="
+                                    task.type === 'single_choice'
+                                        ? 'radio'
+                                        : 'checkbox'
+                                "
+                                :name="`correct-${ti}`"
+                                :checked="opt.isCorrect"
+                                class="accent-emerald-600"
+                                @change="setCorrect(task, oi, $event)"
+                            />
                             correct
                         </label>
                         <button type="button" @click="removeOption(ti, oi)">
@@ -259,6 +269,16 @@ function removeTask(i: number) {
 function addOption(ti: number) {
     tasks.value[ti]!.options.push({ text: '', isCorrect: false });
 }
+
+// single_choice: правильный ответ ровно один, выбор снимает отметку с других.
+function setCorrect(task: TaskForm, oi: number, e: Event) {
+    const isChecked = (e.target as HTMLInputElement).checked;
+    if (task.type === 'single_choice') {
+        task.options.forEach((o, i) => (o.isCorrect = i === oi));
+    } else {
+        task.options[oi]!.isCorrect = isChecked;
+    }
+}
 function removeOption(ti: number, oi: number) {
     tasks.value[ti]!.options.splice(oi, 1);
 }
@@ -277,6 +297,11 @@ async function save() {
                 if (nums.some(n => !(t.accepts[n - 1] ?? '').trim()))
                     throw new Error(
                         `Question ${i + 1}: fill accepted answers for every gap`,
+                    );
+            } else if (t.type === 'single_choice') {
+                if (t.options.filter(o => o.isCorrect).length !== 1)
+                    throw new Error(
+                        `Question ${i + 1}: single choice needs exactly one correct option`,
                     );
             } else if (!t.options.some(o => o.isCorrect)) {
                 throw new Error(`Question ${i + 1}: mark at least one correct`);

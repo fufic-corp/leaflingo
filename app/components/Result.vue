@@ -1,22 +1,22 @@
 <template>
-    <div
-        class="mx-auto flex max-w-sm flex-col items-center gap-4 rounded-2xl border-2 border-emerald-100 bg-white p-8 text-center"
-    >
+    <div class="flex flex-col items-center gap-5 text-center">
         <!-- Emoji from external API -->
         <div
-            class="flex h-24 w-24 items-center justify-center rounded-2xl bg-emerald-50 text-6xl leading-none"
+            class="flex h-24 w-24 items-center justify-center rounded-full bg-emerald-50 text-5xl leading-none"
         >
             <span v-if="emojiLoading" class="text-2xl text-neutral-300">…</span>
             <span v-else v-html="emoji" />
         </div>
 
         <div>
-            <p class="text-lg font-semibold text-neutral-800">Your result</p>
-            <p class="mt-1 text-4xl font-bold text-emerald-600">
-                {{ correct }} / {{ total }}
+            <p class="text-sm font-medium text-neutral-400">Your result</p>
+            <p
+                class="mt-1 text-5xl font-bold tracking-tight text-neutral-900"
+            >
+                {{ correct }}<span class="text-neutral-300">/{{ total }}</span>
             </p>
-            <p class="mt-1 text-sm text-neutral-400">
-                {{ percentage }}% correct answers
+            <p class="mt-2 text-sm font-semibold text-emerald-600">
+                {{ percentage }}% correct
             </p>
         </div>
     </div>

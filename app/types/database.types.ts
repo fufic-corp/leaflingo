@@ -103,6 +103,38 @@ export type Database = {
         }
         Relationships: []
       }
+      task_attempts: {
+        Row: {
+          answered_at: string
+          correct: boolean
+          id: number
+          task_id: number
+          user_id: string
+        }
+        Insert: {
+          answered_at?: string
+          correct: boolean
+          id?: never
+          task_id: number
+          user_id?: string
+        }
+        Update: {
+          answered_at?: string
+          correct?: boolean
+          id?: never
+          task_id?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_attempts_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tasks: {
         Row: {
           content: Json | null

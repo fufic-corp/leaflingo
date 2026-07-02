@@ -1,17 +1,22 @@
 <template>
-    <aside class="flex flex-col w-60 bg-emerald-50/30">
+    <aside class="flex w-64 shrink-0 flex-col">
+        <!-- Logo -->
+        <NuxtLink to="/" class="flex h-16 items-center px-6">
+            <img src="/logo.png" class="h-7 w-auto" />
+        </NuxtLink>
+
         <!-- Nav -->
-        <nav class="flex flex-col p-3 flex-1">
+        <nav class="flex flex-1 flex-col overflow-y-auto px-3 pt-1">
             <!-- Profile nav item -->
             <div
                 v-if="profileStore.pending"
-                class="flex items-center h-12 px-3 gap-4"
+                class="flex h-10 items-center gap-3 px-3"
             >
                 <div
-                    class="w-6.5 h-6.5 rounded-xl bg-neutral-200 animate-pulse shrink-0"
+                    class="h-6 w-6 shrink-0 animate-pulse rounded-full bg-neutral-200"
                 />
                 <div
-                    class="h-3 w-24 rounded-full bg-neutral-200 animate-pulse"
+                    class="h-3 w-24 animate-pulse rounded-full bg-neutral-200"
                 />
             </div>
             <SidebarNavItem
@@ -22,11 +27,9 @@
                 :badge="profileStore.isAdmin"
             />
 
-            <div class="mx-3 my-2 border-t border-emerald-100" />
+            <div class="mx-3 my-2.5 border-t border-emerald-900/10" />
 
-            <ExamSwitcher v-model:open="examOpen" />
-
-            <template v-if="!examOpen">
+            <div class="flex flex-col gap-0.5">
                 <SidebarNavItem
                     v-for="item in navItems"
                     :key="item.href"
@@ -34,16 +37,16 @@
                     :label="item.label"
                     :icon="item.icon"
                 />
-            </template>
+            </div>
         </nav>
 
         <!-- Bottom -->
         <div class="p-3">
             <button
                 @click="logout"
-                class="flex items-center h-8 px-3 gap-2 text-neutral-400 hover:text-red-400 transition-colors text-xs font-semibold w-full cursor-pointer"
+                class="flex h-10 w-full cursor-pointer items-center gap-2.5 rounded-xl px-3 text-sm font-semibold text-neutral-400 transition-colors hover:bg-white hover:text-red-500 hover:shadow-sm"
             >
-                <Icon name="lucide:log-out" :size="14" class="shrink-0" />
+                <Icon name="lucide:log-out" :size="16" class="shrink-0" />
                 Sign out
             </button>
         </div>
@@ -53,8 +56,6 @@
 <script setup lang="ts">
 const supabase = useSupabaseClient();
 const profileStore = useProfileStore();
-
-const examOpen = ref(false);
 
 const navItemsUser = [
     { href: '/', label: 'Dashboard', icon: 'tabler:layout-dashboard' },

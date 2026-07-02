@@ -1,41 +1,31 @@
 <template>
-    <div class="mx-auto flex max-w-xl flex-col gap-4">
-        <NuxtLink
-            to="/practice"
-            class="flex w-fit items-center gap-1 text-sm font-semibold text-emerald-600 transition-colors hover:text-emerald-500"
-        >
-            <Icon name="tabler:arrow-left" :size="18" />
-            Back
-        </NuxtLink>
-
+    <div class="flex flex-col gap-6">
         <!-- Essay topic -->
-        <div class="rounded-2xl border-2 border-emerald-100 bg-white p-6">
-            <p
-                class="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-neutral-400"
-            >
-                <Icon name="tabler:pencil" :size="16" />
-                Essay topic
-            </p>
-            <p class="text-lg font-semibold text-neutral-800">{{ topic }}</p>
-        </div>
+        <p class="text-xl font-semibold leading-snug text-neutral-900">
+            {{ topic }}
+        </p>
 
         <!-- Writing area -->
-        <div class="rounded-2xl border-2 border-emerald-100 bg-white p-6">
+        <div
+            class="rounded-2xl border border-neutral-200 bg-white p-4 transition-colors focus-within:border-emerald-500"
+        >
             <textarea
                 v-model="text"
                 rows="12"
-                class="input w-full resize-y"
+                class="w-full resize-y border-0 p-2 text-base leading-7 text-neutral-800 outline-none placeholder:text-neutral-400"
                 placeholder="Write your essay here…"
             />
-            <p class="mt-2 text-xs text-neutral-400">{{ wordCount }} words</p>
+            <p class="px-2 text-right text-xs font-medium text-neutral-400">
+                {{ wordCount }} words
+            </p>
         </div>
 
         <button
-            class="btn w-fit"
+            class="btn w-full py-3.5 text-base"
             :disabled="!text.trim() || loading"
             @click="submit"
         >
-            {{ loading ? 'Checking…' : 'Submit' }}
+            {{ loading ? 'Checking…' : 'Check my essay' }}
         </button>
 
         <p v-if="error" class="text-sm font-semibold text-red-500">
@@ -45,15 +35,17 @@
         <!-- Review -->
         <template v-if="review">
             <!-- Text with highlighted mistakes -->
-            <div class="rounded-2xl border-2 border-emerald-100 bg-white p-6">
-                <p
-                    class="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-400"
-                >
+            <div class="border-t border-neutral-200 pt-6">
+                <p class="mb-3 text-base font-semibold text-neutral-900">
                     Your text
                 </p>
-                <p class="whitespace-pre-wrap leading-relaxed text-neutral-800">
+                <p
+                    class="whitespace-pre-wrap leading-7 text-neutral-700"
+                >
                     <template v-for="(part, i) in parts" :key="i">
-                        <span v-if="part.type === 'text'">{{ part.value }}</span>
+                        <span v-if="part.type === 'text'">{{
+                            part.value
+                        }}</span>
                         <span
                             v-else
                             class="rounded bg-red-100 px-0.5 font-semibold text-red-600 underline decoration-wavy decoration-red-400"
@@ -67,21 +59,13 @@
             </div>
 
             <!-- Corrections -->
-            <div
-                v-if="review.mistakes.length"
-                class="flex flex-col gap-3"
-            >
-                <p
-                    class="text-xs font-semibold uppercase tracking-wide text-neutral-400"
-                >
-                    Corrections
-                </p>
+            <div v-if="review.mistakes.length" class="flex flex-col gap-3">
                 <div
                     v-for="(m, i) in review.mistakes"
                     :key="i"
-                    class="rounded-2xl border-2 border-emerald-100 bg-white p-4"
+                    class="rounded-xl bg-neutral-50 p-4"
                 >
-                    <p class="flex items-center gap-2">
+                    <p class="flex items-center gap-2.5">
                         <span
                             class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-red-100 text-xs font-bold text-red-600"
                         >
@@ -91,20 +75,21 @@
                             {{ m.mistake }}
                         </span>
                     </p>
-                    <p class="mt-2 text-sm text-neutral-600">
+                    <p class="mt-2 text-sm leading-6 text-neutral-600">
                         {{ m.explanation }}
                     </p>
-                    <p
-                        class="mt-2 flex items-center gap-1 text-sm font-semibold text-emerald-600"
-                    >
-                        <Icon name="tabler:arrow-right" :size="16" />
+                    <p class="mt-1.5 text-sm font-semibold text-emerald-600">
                         {{ m.proposition }}
                     </p>
                 </div>
             </div>
 
-            <p v-else class="text-sm font-semibold text-emerald-600">
-                No mistakes found — great job!
+            <p
+                v-else
+                class="flex items-center gap-2 text-sm font-semibold text-emerald-600"
+            >
+                <Icon name="tabler:circle-check-filled" :size="18" />
+                No mistakes found, great job!
             </p>
         </template>
     </div>

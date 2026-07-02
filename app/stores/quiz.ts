@@ -3,6 +3,8 @@
 // Страница грузит данные и отдаёт сырые задания через start() — стор сам
 // разбирает content в нормализованный вид.
 
+import type { Database } from '~/types/database.types';
+
 export type QuizOption = { text: string | null; correct: boolean };
 export type QuizBlank = { accept: string[] };
 export type QuizMaterial = {
@@ -38,6 +40,8 @@ export type QuizItem = {
 const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ');
 
 export const useQuizStore = defineStore('quiz', () => {
+    const supabase = useSupabaseClient<Database>();
+
     const items = ref<QuizItem[]>([]);
     const index = ref(0);
     const selected = ref<number[]>([]); // choice: индексы выбранных вариантов
@@ -155,12 +159,22 @@ export const useQuizStore = defineStore('quiz', () => {
         }
     }
 
+    // Каждый ответ фиксируем в task_attempts: это фундамент для прогресса,
+    // повторения тем и аналитики. Ошибка записи не должна ломать прохождение.
+    async function recordAttempt(task_id: number, correct: boolean) {
+        const { error } = await supabase
+            .from('task_attempts')
+            .insert({ task_id, correct });
+        if (error) console.error('task_attempts insert failed:', error);
+    }
+
     // Check -> Next -> Finish одной кнопкой.
     function primaryAction() {
         if (!current.value) return;
         if (!checked.value) {
             checked.value = true;
             if (isAnswerCorrect.value) correctCount.value++;
+            void recordAttempt(current.value.task.id, isAnswerCorrect.value);
             return;
         }
         if (isLast.value) {
@@ -170,27 +184,6 @@ export const useQuizStore = defineStore('quiz', () => {
         index.value++;
         checked.value = false;
         resetAnswer();
-    }
-
-    function optionClass(opt: QuizOption, i: number) {
-        if (!checked.value) {
-            return selected.value.includes(i)
-                ? 'border-emerald-400 bg-emerald-50 text-neutral-800'
-                : 'border-emerald-100 hover:border-emerald-300 text-neutral-700';
-        }
-        if (opt.correct)
-            return 'border-emerald-500 bg-emerald-50 text-emerald-700';
-        if (selected.value.includes(i))
-            return 'border-red-400 bg-red-50 text-red-600';
-        return 'border-emerald-100 text-neutral-400 opacity-70';
-    }
-
-    function blankClass(i: number) {
-        if (!checked.value)
-            return 'border-emerald-200 focus:border-emerald-400 text-neutral-800';
-        return isBlankCorrect(i)
-            ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
-            : 'border-red-400 bg-red-50 text-red-600';
     }
 
     return {
@@ -210,8 +203,6 @@ export const useQuizStore = defineStore('quiz', () => {
         start,
         toggle,
         primaryAction,
-        optionClass,
-        blankClass,
         isBlankCorrect,
     };
 });
