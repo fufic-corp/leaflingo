@@ -18,45 +18,25 @@
             />
         </button>
 
-        <!-- выпадающий список экзаменов -->
+        <!-- список экзаменов, на которые можно переключиться -->
         <div
             v-if="open"
-            class="absolute right-0 top-full z-20 mt-1.5 flex w-52 flex-col gap-0.5 rounded-xl border border-neutral-200/80 bg-white p-1 shadow-lg"
+            class="absolute right-0 top-full z-20 mt-2 flex w-44 flex-col rounded-xl bg-white p-1.5 shadow-lg ring-1 ring-black/5"
         >
-            <template v-for="lang in LANGUAGES" :key="lang.value">
-                <button
-                    v-for="ex in lang.exams"
-                    :key="ex.value"
-                    type="button"
-                    class="flex h-10 cursor-pointer items-center gap-2.5 rounded-lg px-2.5 text-sm font-medium transition-colors"
-                    :class="
-                        store.exam === ex.value
-                            ? 'bg-emerald-50 text-emerald-700'
-                            : 'text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900'
-                    "
-                    @click="choose(lang.value, ex.value)"
+            <button
+                v-for="alt in alternatives"
+                :key="alt.ex.value"
+                type="button"
+                class="flex h-10 w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 text-sm font-semibold text-neutral-700 transition-colors hover:bg-neutral-100"
+                @click="choose(alt.lang.value, alt.ex.value)"
+            >
+                <span
+                    class="flex h-4.5 shrink-0 overflow-hidden rounded-[4px]"
                 >
-                    <span
-                        class="flex h-4 shrink-0 overflow-hidden rounded-[3px]"
-                    >
-                        <Icon :name="lang.flag" class="h-4! w-5.5!" />
-                    </span>
-                    <span
-                        class="flex min-w-0 flex-col items-start leading-tight"
-                    >
-                        <span class="truncate">{{ ex.label }}</span>
-                        <span class="text-[11px] font-normal text-neutral-400">
-                            {{ lang.label }}
-                        </span>
-                    </span>
-                    <Icon
-                        v-if="store.exam === ex.value"
-                        name="tabler:check"
-                        :size="15"
-                        class="ml-auto shrink-0 text-emerald-500"
-                    />
-                </button>
-            </template>
+                    <Icon :name="alt.lang.flag" class="h-4.5! w-6!" />
+                </span>
+                {{ alt.ex.label }}
+            </button>
         </div>
     </div>
 </template>
@@ -69,6 +49,15 @@ const emit = defineEmits<{ 'update:open': [boolean] }>();
 
 const store = useExamStore();
 const root = ref<HTMLElement | null>(null);
+
+// Текущий экзамен уже виден в чипе, поэтому в меню — только альтернативы.
+const alternatives = computed(() =>
+    LANGUAGES.flatMap(lang =>
+        lang.exams
+            .filter(ex => ex.value !== store.exam)
+            .map(ex => ({ lang, ex })),
+    ),
+);
 
 onClickOutside(root, () => {
     if (props.open) emit('update:open', false);

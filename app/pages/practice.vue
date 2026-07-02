@@ -1,15 +1,38 @@
 <template>
-    <div class="mx-auto flex w-full max-w-4xl flex-col gap-10 pt-6">
+    <div class="mx-auto flex w-full max-w-8xl flex-col gap-10 p-6">
         <!-- Header -->
-        <div class="text-center">
-            <p class="text-sm font-medium text-neutral-400">
-                {{ dateLabel }}
-            </p>
-            <h1
-                class="mt-1 text-3xl font-bold tracking-tight text-neutral-900"
-            >
-                Today's practice
-            </h1>
+        <div class="flex flex-wrap items-end gap-8">
+            <div class="text-left">
+                <p class="text-sm font-medium text-neutral-400">
+                    {{ dateLabel }}
+                </p>
+                <h1
+                    class="mt-1 text-3xl font-bold tracking-tight text-neutral-900"
+                >
+                    Today's practice
+                </h1>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <span
+                    class="flex items-center gap-1.5 rounded-xl bg-neutral-100 px-4 py-3 text-sm font-semibold text-neutral-600"
+                >
+                    <Icon name="tabler:clock-hour-3" :size="15" />
+                    {{ totalMinutes }} min
+                </span>
+                <button
+                    class="group relative inline-flex cursor-pointer items-center gap-2 overflow-hidden rounded-xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-white shadow-md shadow-emerald-600/25 ring-4 ring-inset ring-white/25 transition-all hover:-translate-y-px hover:shadow-lg hover:shadow-emerald-600/35 active:translate-y-0 disabled:pointer-events-none disabled:opacity-50"
+                    :disabled="!totalTasks"
+                    @click="navigateTo('/session/daily')"
+                >
+                    <!-- пробегающий блик -->
+                    <span
+                        class="pointer-events-none absolute top-0 left-0 h-full w-1/4 -skew-x-12 bg-white/25 blur-sm"
+                    />
+                    <Icon name="tabler:player-play-filled" :size="15" />
+                    Start session
+                </button>
+            </div>
         </div>
 
         <!-- Session track -->
@@ -23,8 +46,8 @@
                 :class="
                     part.status === 'ready'
                         ? part.color +
-                          ' cursor-pointer text-white transition-all duration-150 hover:-translate-y-1 hover:shadow-lg'
-                        : 'bg-neutral-100 text-neutral-400'
+                          ' cursor-pointer text-white transition-all duration-150 hover:-translate-y-1 hover:shadow-lg ring-4 ring-inset ring-white/25'
+                        : 'bg-neutral-100 text-neutral-400 '
                 "
                 :style="{ flexGrow: part.minutes }"
             >
@@ -38,24 +61,6 @@
                     }}
                 </span>
             </component>
-        </div>
-
-        <!-- Actions -->
-        <div class="flex items-center justify-center gap-3">
-            <span
-                class="flex items-center gap-1.5 rounded-xl bg-neutral-100 px-4 py-3 text-sm font-semibold text-neutral-600"
-            >
-                <Icon name="tabler:clock-hour-3" :size="15" />
-                {{ totalMinutes }} min
-            </span>
-            <button
-                class="btn px-6 py-3"
-                :disabled="!totalTasks"
-                @click="navigateTo('/session/daily')"
-            >
-                <Icon name="tabler:player-play-filled" :size="15" />
-                Start session
-            </button>
         </div>
 
         <!-- Free practice -->
