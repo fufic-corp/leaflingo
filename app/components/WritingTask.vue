@@ -96,14 +96,13 @@
 </template>
 
 <script setup lang="ts">
-const examStore = useExamStore();
+import { WRITING_TOPICS } from '#shared/utils/topics';
 
-const TOPICS = [
-    'Some people think technology makes our lives more complicated. To what extent do you agree?',
-    'Many believe that studying abroad is the best way to learn a language. Discuss the advantages and disadvantages.',
-    'Should governments invest more in public transport than in roads? Give your opinion.',
-    'Is it better to work for a large company or to be self-employed? Explain your view.',
-];
+// В дневной сессии тема приходит с сервера; в свободной тренировке — случайная.
+const props = defineProps<{ topic?: string }>();
+const emit = defineEmits<{ done: [] }>();
+
+const examStore = useExamStore();
 
 // Shape returned by POST /api/gpt/rec
 type Mistake = {
@@ -120,7 +119,10 @@ type Part =
     | { type: 'text'; value: string }
     | { type: 'mistake'; value: string; n: number };
 
-const topic = ref(TOPICS[Math.floor(Math.random() * TOPICS.length)]!);
+const topic = ref(
+    props.topic ??
+        WRITING_TOPICS[Math.floor(Math.random() * WRITING_TOPICS.length)]!,
+);
 const text = ref('');
 const loading = ref(false);
 const error = ref('');
@@ -176,6 +178,7 @@ async function submit() {
                 text: text.value.trim(),
             },
         });
+        emit('done');
     } catch (e) {
         error.value =
             e instanceof Error ? e.message : 'Failed to check the essay';

@@ -9,7 +9,13 @@
                 <Icon name="tabler:x" :size="20" />
             </NuxtLink>
 
-            <template v-if="isQuiz && items.length && !finished && !loading">
+            <template v-if="showBar">
+                <span
+                    v-if="isDaily"
+                    class="shrink-0 text-sm font-semibold text-neutral-400"
+                >
+                    {{ currentLabel }}
+                </span>
                 <div
                     class="h-2.5 flex-1 overflow-hidden rounded-full bg-neutral-100"
                 >
@@ -25,17 +31,88 @@
                 </span>
             </template>
             <span v-else class="text-sm font-semibold text-neutral-400">
-                {{ partLabel }}
+                {{ currentLabel }}
             </span>
         </div>
 
-        <!-- Writing -->
+        <!-- Writing: свободная тренировка -->
         <WritingTask
             v-if="part === 'writing'"
             class="mx-auto w-full max-w-2xl py-8"
         />
 
-        <!-- Quiz -->
+        <!-- Дневная сессия: куски по порядку -->
+        <template v-else-if="isDaily">
+            <div
+                v-if="loading"
+                class="flex flex-1 items-center justify-center"
+            >
+                <Icon
+                    name="tabler:loader-2"
+                    :size="28"
+                    class="animate-spin text-emerald-500"
+                />
+            </div>
+
+            <!-- Вся сессия пройдена -->
+            <div
+                v-else-if="sessionComplete"
+                class="flex flex-1 flex-col items-center justify-center gap-6"
+            >
+                <div
+                    class="flex h-24 w-24 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"
+                >
+                    <Icon name="tabler:check" :size="42" />
+                </div>
+                <div class="text-center">
+                    <p
+                        class="text-2xl font-bold tracking-tight text-neutral-900"
+                    >
+                        Session complete
+                    </p>
+                    <p v-if="sessionScore" class="mt-1 text-sm text-neutral-500">
+                        {{ sessionScore }} correct answers today
+                    </p>
+                </div>
+                <NuxtLink to="/practice" class="btn px-6 py-3">
+                    Back to practice
+                </NuxtLink>
+            </div>
+
+            <!-- Кусок writing -->
+            <template v-else-if="currentKey === 'writing'">
+                <WritingTask
+                    :topic="dailyTopic"
+                    class="mx-auto w-full max-w-2xl py-8"
+                    @done="onWritingDone"
+                />
+                <div v-if="writingDone" class="mx-auto pb-10">
+                    <button class="btn px-6 py-3" @click="advance">
+                        {{ isLastPart ? 'Finish session' : 'Continue' }}
+                    </button>
+                </div>
+            </template>
+
+            <!-- Квиз-кусок -->
+            <template v-else>
+                <div
+                    v-if="finished"
+                    class="flex flex-1 flex-col items-center justify-center gap-8"
+                >
+                    <Result :total="items.length" :correct="correctCount" />
+                    <button class="btn px-6 py-3" @click="advance">
+                        {{
+                            isLastPart
+                                ? 'Finish session'
+                                : `Continue: ${nextLabel}`
+                        }}
+                    </button>
+                </div>
+                <QuizStage v-else />
+            </template>
+        </template>
+
+        <!-- Свободная тренировка: reading / listening -->
         <template v-else>
             <div
                 v-if="loading"
@@ -70,61 +147,7 @@
                 </NuxtLink>
             </div>
 
-            <div
-                v-else-if="current"
-                class="mx-auto w-full max-w-5xl flex-1 py-10"
-            >
-                <!-- Материал слева, вопрос справа: как в компьютерном IELTS -->
-                <div
-                    v-if="current.material"
-                    class="grid gap-10 lg:grid-cols-2 lg:gap-0"
-                >
-                    <div class="min-w-0 lg:pr-12">
-                        <div class="lg:sticky lg:top-2">
-                            <h2
-                                class="text-xl font-bold tracking-tight text-neutral-900"
-                            >
-                                {{ current.material.title }}
-                            </h2>
-                            <video
-                                v-if="
-                                    current.material.kind === 'video' &&
-                                    current.material.file_url
-                                "
-                                :src="current.material.file_url"
-                                controls
-                                class="mt-4 w-full rounded-xl bg-black"
-                            />
-                            <audio
-                                v-else-if="
-                                    current.material.kind === 'audio' &&
-                                    current.material.file_url
-                                "
-                                :src="current.material.file_url"
-                                controls
-                                class="mt-4 w-full"
-                            />
-                            <div
-                                v-else-if="current.material.body"
-                                class="mt-4 whitespace-pre-wrap text-[15px] leading-7 text-neutral-600 lg:max-h-[68vh] lg:overflow-y-auto lg:pr-3"
-                            >
-                                {{ current.material.body }}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div
-                        class="min-w-0 lg:border-l lg:border-neutral-200 lg:pl-12"
-                    >
-                        <QuizQuestion />
-                    </div>
-                </div>
-
-                <!-- Вопрос без материала: одна колонка по центру -->
-                <div v-else class="mx-auto max-w-xl">
-                    <QuizQuestion />
-                </div>
-            </div>
+            <QuizStage v-else />
         </template>
     </div>
 </template>
@@ -133,17 +156,18 @@
 import type { Database } from '~/types/database.types';
 import type { QuizRawItem } from '~/stores/quiz';
 
-// Единая страница прохождения куска сессии: /session/reading,
-// /session/listening, /session/daily (микс), /session/writing (эссе).
-// Какие задания грузить, решает загрузчик соответствующего куска.
+// Единая страница прохождения: /session/reading и /session/listening —
+// свободная тренировка на случайных заданиях, /session/writing — эссе,
+// /session/daily — плеер дневной сессии: идёт по кускам сохранённого на
+// день плана (весь план или один кусок через ?part=), отмечая прогресс.
 
-const PARTS = {
+const PART_LABELS: Record<string, string> = {
     daily: 'Daily session',
     reading: 'Reading',
     listening: 'Listening',
     writing: 'Writing',
-} as const;
-type PartKey = keyof typeof PARTS;
+};
+type PartKey = 'daily' | 'reading' | 'listening' | 'writing';
 
 definePageMeta({
     validate: route =>
@@ -154,17 +178,13 @@ definePageMeta({
 
 const QUIZ_SIZE = 20;
 
-// Типы материалов, из которых собирается daily-микс. Каждый тип гарантированно
-// попадает в сессию, количество вопросов на тип может отличаться.
-const MATERIAL_TYPES = ['text', 'audio'] as const;
-
 const route = useRoute();
 const supabase = useSupabaseClient<Database>();
 const examStore = useExamStore();
+const sessionStore = useSessionStore();
 
 const part = computed(() => route.params.part as PartKey);
-const partLabel = computed(() => PARTS[part.value]);
-const isQuiz = computed(() => part.value !== 'writing');
+const isDaily = computed(() => part.value === 'daily');
 
 type Material = {
     id: number;
@@ -186,12 +206,159 @@ type TaskRow = {
 type Block = { material: Material | null; tasks: TaskRow[] };
 
 const quiz = useQuizStore();
-const { items, index, finished, correctCount, current } = storeToRefs(quiz);
+const { items, index, finished, correctCount } = storeToRefs(quiz);
 
 const loading = ref(true);
 
+// --- состояние плеера дневной сессии ---
+const playlist = ref<string[]>([]);
+const playIdx = ref(0);
+const sessionComplete = ref(false);
+const writingDone = ref(false);
+
+const currentKey = computed(() => playlist.value[playIdx.value] ?? null);
+const isLastPart = computed(
+    () => playIdx.value >= playlist.value.length - 1,
+);
+const nextLabel = computed(() => {
+    const key = playlist.value[playIdx.value + 1];
+    return key ? PART_LABELS[key] : '';
+});
+const dailyTopic = computed(
+    () => sessionStore.parts.find(p => p.key === 'writing')?.topic,
+);
+
+const currentLabel = computed(() => {
+    if (!isDaily.value) return PART_LABELS[part.value];
+    if (sessionComplete.value || !currentKey.value) return 'Daily session';
+    return PART_LABELS[currentKey.value] ?? 'Daily session';
+});
+
+const showBar = computed(() => {
+    if (part.value === 'writing') return false;
+    if (loading.value || finished.value || !items.value.length) return false;
+    if (isDaily.value)
+        return !sessionComplete.value && currentKey.value !== 'writing';
+    return true;
+});
+
+// Итог дня по квиз-кускам для финального экрана.
+const sessionScore = computed(() => {
+    let correct = 0;
+    let total = 0;
+    for (const p of Object.values(sessionStore.progress)) {
+        if (typeof p?.correct === 'number' && typeof p?.total === 'number') {
+            correct += p.correct;
+            total += p.total;
+        }
+    }
+    return total ? `${correct}/${total}` : '';
+});
+
 onMounted(load);
 watch([part, () => examStore.exam], load);
+
+// Квиз-кусок сессии завершён — фиксируем результат на сервере.
+watch(finished, val => {
+    if (
+        val &&
+        isDaily.value &&
+        currentKey.value &&
+        currentKey.value !== 'writing' &&
+        !sessionComplete.value
+    ) {
+        void sessionStore.completePart(
+            currentKey.value,
+            correctCount.value,
+            items.value.length,
+        );
+    }
+});
+
+async function load() {
+    if (part.value === 'writing') return;
+    if (isDaily.value) return initDaily();
+
+    loading.value = true;
+    quiz.start(await loadBySkill(part.value as 'reading' | 'listening'));
+    loading.value = false;
+}
+
+// --- дневная сессия ---
+
+async function initDaily() {
+    loading.value = true;
+    sessionComplete.value = false;
+    writingDone.value = false;
+
+    await sessionStore.fetchToday(examStore.exam);
+
+    // ?part=reading — пройти только этот кусок; иначе все непройденные.
+    const requested =
+        typeof route.query.part === 'string' ? route.query.part : undefined;
+    const keys = sessionStore.parts.map(p => p.key);
+    playlist.value =
+        requested && keys.includes(requested)
+            ? [requested]
+            : sessionStore.remaining.map(p => p.key);
+    playIdx.value = 0;
+
+    if (!playlist.value.length) {
+        sessionComplete.value = true;
+        loading.value = false;
+        return;
+    }
+    await loadCurrentPart();
+    loading.value = false;
+}
+
+async function loadCurrentPart() {
+    writingDone.value = false;
+    const key = currentKey.value;
+    if (!key || key === 'writing') return;
+
+    loading.value = true;
+    const ids =
+        sessionStore.parts.find(p => p.key === key)?.task_ids ?? [];
+    quiz.start(await loadTasksByIds(ids));
+    loading.value = false;
+
+    // Задания куска могли удалить после генерации — пропускаем его.
+    if (!items.value.length) await advance();
+}
+
+async function advance() {
+    if (isLastPart.value) {
+        sessionComplete.value = true;
+        return;
+    }
+    playIdx.value++;
+    await loadCurrentPart();
+}
+
+function onWritingDone() {
+    writingDone.value = true;
+    void sessionStore.completePart('writing');
+}
+
+// Задания сессии в сохранённом порядке (блоки материалов идут подряд).
+async function loadTasksByIds(ids: number[]): Promise<QuizRawItem[]> {
+    if (!ids.length) return [];
+    const { data } = await supabase
+        .from('tasks')
+        .select(
+            'id, task_text, type, material_id, content, materials(id, kind, title, body, file_url)',
+        )
+        .in('id', ids);
+    const rows = (data ?? []) as unknown as TaskRow[];
+    const byId = new Map(rows.map(r => [r.id, r]));
+    return ids
+        .map(id => byId.get(id))
+        .filter((t): t is TaskRow => !!t)
+        .map(t => ({ task: t, material: t.materials ?? null }));
+}
+
+// --- свободная тренировка ---
 
 function shuffle<T>(arr: T[]): T[] {
     const a = [...arr];
@@ -208,94 +375,20 @@ function flatten(blocks: Block[]): QuizRawItem[] {
     );
 }
 
-async function load() {
-    if (!isQuiz.value) return;
-    loading.value = true;
-
-    const loaders: Record<Exclude<PartKey, 'writing'>, () => Promise<QuizRawItem[]>> = {
-        reading: loadReading,
-        listening: loadListening,
-        daily: loadDaily,
-    };
-    quiz.start(await loaders[part.value as Exclude<PartKey, 'writing'>]());
-
-    loading.value = false;
-}
-
-// Reading: текстовые пассажи и их вопросы, вопросы одного пассажа идут подряд.
-async function loadReading(): Promise<QuizRawItem[]> {
-    const { data: mats } = await supabase
-        .from('materials')
-        .select('id, kind, title, body, file_url')
-        .eq('kind', 'text');
-    const materialById = new Map(
-        ((mats ?? []) as Material[]).map(m => [m.id, m]),
-    );
-    if (!materialById.size) return [];
-
-    const { data } = await supabase
-        .from('tasks')
-        .select('id, task_text, type, material_id, content')
-        .eq('exam', examStore.exam)
-        .in('material_id', [...materialById.keys()]);
-    const tasks = (data ?? []) as unknown as TaskRow[];
-
-    const blocksByMaterial = new Map<number, Block>();
-    for (const t of tasks) {
-        const material =
-            t.material_id != null ? materialById.get(t.material_id) : undefined;
-        if (!material) continue;
-        const block = blocksByMaterial.get(material.id);
-        if (block) block.tasks.push(t);
-        else blocksByMaterial.set(material.id, { material, tasks: [t] });
-    }
-
-    return flatten(shuffle([...blocksByMaterial.values()])).slice(
-        0,
-        QUIZ_SIZE,
-    );
-}
-
-// Listening: вопросы к аудио и видео, сгруппированные по записи.
-async function loadListening(): Promise<QuizRawItem[]> {
-    const { data } = await supabase
-        .from('tasks')
-        .select(
-            'id, task_text, type, material_id, content, materials!inner(id, kind, title, body, file_url)',
-        )
-        .eq('exam', examStore.exam)
-        .in('materials.kind', ['audio', 'video']);
-    const tasks = (data ?? []) as unknown as TaskRow[];
-
-    const blocksByMaterial = new Map<number, Block>();
-    for (const t of tasks) {
-        if (!t.materials) continue;
-        const block = blocksByMaterial.get(t.materials.id);
-        if (block) block.tasks.push(t);
-        else
-            blocksByMaterial.set(t.materials.id, {
-                material: t.materials,
-                tasks: [t],
-            });
-    }
-
-    return flatten(shuffle([...blocksByMaterial.values()])).slice(
-        0,
-        QUIZ_SIZE,
-    );
-}
-
-// Daily: микс из всех типов материалов, каждый тип гарантированно представлен.
-async function loadDaily(): Promise<QuizRawItem[]> {
+// Свободная тренировка по скиллу: вопросы с материалом идут блоками
+// (материал + все его вопросы подряд), одиночки — как отдельные блоки.
+async function loadBySkill(
+    skill: 'reading' | 'listening',
+): Promise<QuizRawItem[]> {
     const { data } = await supabase
         .from('tasks')
         .select(
             'id, task_text, type, material_id, content, materials(id, kind, title, body, file_url)',
         )
-        .eq('exam', examStore.exam);
+        .eq('exam', examStore.exam)
+        .eq('skill', skill);
     const tasks = (data ?? []) as unknown as TaskRow[];
 
-    // Блоки: материал со всеми его вопросами либо отдельный вопрос без материала.
     const blocksByMaterial = new Map<number, Block>();
     const standalone: Block[] = [];
     for (const t of tasks) {
@@ -312,38 +405,8 @@ async function loadDaily(): Promise<QuizRawItem[]> {
             });
     }
 
-    // Раскладываем блоки по типам материала, оставляя только настроенные типы.
-    const blocksByType = new Map<string, Block[]>(
-        MATERIAL_TYPES.map(type => [type, [] as Block[]]),
-    );
-    for (const block of blocksByMaterial.values()) {
-        blocksByType.get(block.material!.kind)?.push(block);
-    }
-    for (const type of MATERIAL_TYPES) {
-        blocksByType.set(type, shuffle(blocksByType.get(type)!));
-    }
-
-    // Минимум один блок каждого типа, остальное добираем случайно.
-    const chosen: Block[] = [];
-    let count = 0;
-    for (const type of MATERIAL_TYPES) {
-        const block = blocksByType.get(type)!.shift();
-        if (block) {
-            chosen.push(block);
-            count += block.tasks.length;
-        }
-    }
-    const leftover = shuffle([
-        ...MATERIAL_TYPES.flatMap(type => blocksByType.get(type)!),
-        ...standalone,
-    ]);
-    for (const block of leftover) {
-        if (count >= QUIZ_SIZE) break;
-        chosen.push(block);
-        count += block.tasks.length;
-    }
-
-    // Перемешиваем блоки, чтобы типы материалов чередовались по ходу теста.
-    return flatten(shuffle(chosen));
+    return flatten(
+        shuffle([...blocksByMaterial.values(), ...standalone]),
+    ).slice(0, QUIZ_SIZE);
 }
 </script>

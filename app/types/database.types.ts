@@ -38,6 +38,36 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_sessions: {
+        Row: {
+          created_at: string
+          exam: string
+          id: number
+          parts: Json
+          progress: Json
+          session_date: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          exam: string
+          id?: never
+          parts: Json
+          progress?: Json
+          session_date: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          exam?: string
+          id?: never
+          parts?: Json
+          progress?: Json
+          session_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       materials: {
         Row: {
           body: string | null
